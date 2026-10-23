@@ -1,26 +1,235 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f4f6;
+  --foreground: #18141b;
+  --card: #ffffff;
+  --card-foreground: #18141b;
+  --popover: #ffffff;
+  --popover-foreground: #18141b;
+  --muted: #efedf1;
+  --muted-foreground: #706a76;
+  --border: rgba(24, 20, 27, 0.09);
+  --input: rgba(24, 20, 27, 0.06);
+  --primary: #d51f2b;
+  --primary-foreground: #ffffff;
+  --primary-soft: #fdecec;
+  --accent: #fbe9ea;
+  --accent-foreground: #a3121c;
+  --ring: rgba(213, 31, 43, 0.35);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #18141b;
+  --sidebar-muted: #706a76;
+  --success: #0f9d6a;
+  --success-soft: #e7f8f0;
+  --warning: #c47a08;
+  --warning-soft: #fdf3e0;
+  --danger: #d51f2b;
+  --danger-soft: #fdecec;
+  --chart-grid: rgba(24, 20, 27, 0.08);
+  --chart-1: #d51f2b;
+  --chart-2: #ef5b63;
+  --chart-3: #ff9aa0;
+  --chart-4: #9f0f18;
+  --chart-5: #4a4550;
+  --shadow-soft: 0 1px 2px rgba(18, 14, 21, 0.04), 0 12px 34px -18px rgba(18, 14, 21, 0.25);
+  --shadow-lift: 0 2px 4px rgba(18, 14, 21, 0.04), 0 22px 48px -20px rgba(180, 20, 32, 0.28);
+}
+
+.dark {
+  --background: #070709;
+  --foreground: #f6f4f7;
+  --card: #111014;
+  --card-foreground: #f6f4f7;
+  --popover: #16141a;
+  --popover-foreground: #f6f4f7;
+  --muted: #1b191f;
+  --muted-foreground: #a39da9;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.06);
+  --primary: #ff3b47;
+  --primary-foreground: #1c0508;
+  --primary-soft: #2a1114;
+  --accent: #291216;
+  --accent-foreground: #ffb8bd;
+  --ring: rgba(255, 59, 71, 0.42);
+  --sidebar: #0c0b0e;
+  --sidebar-foreground: #f6f4f7;
+  --sidebar-muted: #a39da9;
+  --success: #3ddc97;
+  --success-soft: #0f2a20;
+  --warning: #f5b544;
+  --warning-soft: #2b2110;
+  --danger: #ff5a63;
+  --danger-soft: #2c1114;
+  --chart-grid: rgba(255, 255, 255, 0.07);
+  --chart-1: #ff3b47;
+  --chart-2: #ff6a73;
+  --chart-3: #ff9aa0;
+  --chart-4: #c41f2a;
+  --chart-5: #6b6570;
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 18px 44px -24px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 26px 64px -26px rgba(255, 59, 71, 0.25);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-color: color-mix(in oklab, var(--primary) 55%, transparent) transparent;
+    scrollbar-width: thin;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+    background-color: color-mix(in oklab, var(--primary) 45%, transparent);
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility surface {
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: var(--shadow-soft);
+}
+
+@keyframes chart-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: chart-draw 1.5s cubic-bezier(0.3, 0.8, 0.2, 1) 0.25s forwards;
+}
+
+.soft-pulse {
+  animation: soft-pulse 2.4s ease-in-out infinite;
+}
+
+.rise-in {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .chart-line,
+  .soft-pulse,
+  .rise-in {
+    animation: none;
+  }
+
+  .chart-line {
+    stroke-dashoffset: 0;
+  }
 }

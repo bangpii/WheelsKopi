@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WheelsKopi
 
-## Getting Started
+Sistem ERP berbasis dashboard untuk WheelsKopi. Dibangun dengan Next.js 16 (App Router, Turbopack), React 19, TypeScript, dan Tailwind CSS v4.
 
-First, run the development server:
+## Menjalankan
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deskripsi Font
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Project ini memakai tiga font yang dimuat secara lokal lewat `next/font/google` (tanpa request ke server Google saat runtime):
 
-## Learn More
+| Font | Variabel CSS | Utility Tailwind | Penggunaan |
+| --- | --- | --- | --- |
+| **Poppins** | `--font-poppins` | `font-display` | Judul halaman, heading card, brand, angka besar yang menonjol |
+| **Inter** | `--font-inter` | `font-sans` (default) | Body text, tabel, form, navigasi, label, dan angka |
+| **Geist Mono** | `--font-geist-mono` | `font-mono` | Kode, SKU, ID transaksi, dan data teknis |
 
-To learn more about Next.js, take a look at the following resources:
+### Alasan pemilihan
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Poppins bersifat geometris dan ramah, cocok untuk memperkuat identitas brand WheelsKopi pada elemen display.
+- Inter sangat legibel di ukuran kecil dan memiliki angka tabular, sehingga ideal untuk tabel dan metrik dashboard ERP.
+- Geist Mono memberi jarak karakter yang konsisten untuk kode atau nominal yang harus sejajar.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Cara pakai
 
-## Deploy on Vercel
+```tsx
+<h1 className="font-display text-2xl font-semibold">Dashboard</h1>
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+<p className="font-sans tabular-nums">Rp 12.450.000</p>
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<span className="font-mono text-sm">SKU-0042</span>
+```
+
+Konfigurasi font berada di `app/layout.tsx`, sedangkan pemetaan utility Tailwind ada di `app/globals.css` pada blok `@theme inline`.
+
+## Struktur
+
+```text
+app/
+  layout.tsx    # root layout + konfigurasi font
+  page.tsx      # halaman Hello World
+  globals.css   # Tailwind + token font/warna
+tools/oxlint/anti-slop/   # plugin lint anti-slop (vendored)
+oxlint.config.ts          # konfigurasi aturan anti-slop
+```
+
+## Skrip
+
+```bash
+npm run dev        # development server
+npm run build      # production build
+npm run start      # jalankan hasil build
+npm run lint       # ESLint
+npm run lint:oxlint # Oxlint + anti-slop
+npm run typecheck  # TypeScript check
+```

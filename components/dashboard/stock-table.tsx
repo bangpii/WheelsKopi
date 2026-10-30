@@ -4,12 +4,14 @@ import { useState } from "react";
 import { AlertTriangle, ArrowUpRight, Filter } from "lucide-react";
 import { rupiah, stockItems } from "@/lib/dashboard-data";
 
-const filters = ["Semua", "Mobil", "Motor", "SUV", "Truk"];
+const filters = ["Semua", "Mobil", "Velg", "Aksesori"];
 
 export function StockTable() {
   const [activeFilter, setActiveFilter] = useState("Semua");
 
-  const filtered = stockItems.filter((item) => activeFilter === "Semua" || item.category === activeFilter);
+  const filtered = stockItems.filter(
+    (item) => activeFilter === "Semua" || item.category === activeFilter,
+  );
 
   return (
     <section
@@ -19,8 +21,12 @@ export function StockTable() {
     >
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 sm:px-6">
         <div>
-          <h2 className="font-display text-base font-semibold tracking-tight">Manajemen Stok</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">Pantau harga jual, stok, dan titik restock</p>
+          <h2 className="font-display text-base font-semibold tracking-tight">
+            Manajemen Stok
+          </h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Pantau harga jual, stok, dan titik restock
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="hidden items-center gap-2 rounded-xl border border-border bg-muted/60 p-1 text-xs font-medium sm:flex">
@@ -30,7 +36,9 @@ export function StockTable() {
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
                 className={`rounded-lg px-3 py-1.5 transition-colors ${
-                  activeFilter === filter ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  activeFilter === filter
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground"
                 }`}
               >
                 {filter}
@@ -107,17 +115,27 @@ export function StockTable() {
                       </span>
                       <div className="min-w-0">
                         <p className="truncate font-medium">{item.name}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">{item.brand}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {item.brand}
+                        </p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-muted-foreground">{item.size}</td>
-                  <td className="px-3 py-3">
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{item.category}</span>
+                  <td className="px-3 py-3 text-muted-foreground">
+                    {item.size}
                   </td>
-                  <td className="px-3 py-3 text-right font-mono tabular-nums">{rupiah.format(item.price)}</td>
+                  <td className="px-3 py-3">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                      {item.category}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-right font-mono tabular-nums">
+                    {rupiah.format(item.price)}
+                  </td>
                   <td className="px-3 py-3 text-right">
-                    <span className={`font-mono tabular-nums ${out ? "text-danger" : low ? "text-warning" : ""}`}>
+                    <span
+                      className={`font-mono tabular-nums ${out ? "text-danger" : low ? "text-warning" : ""}`}
+                    >
                       {item.stock}
                     </span>
                   </td>

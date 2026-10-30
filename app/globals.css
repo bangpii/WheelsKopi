@@ -34,8 +34,10 @@
   --chart-3: #ff9aa0;
   --chart-4: #9f0f18;
   --chart-5: #4a4550;
-  --shadow-soft: 0 1px 2px rgba(18, 14, 21, 0.04), 0 12px 34px -18px rgba(18, 14, 21, 0.25);
-  --shadow-lift: 0 2px 4px rgba(18, 14, 21, 0.04), 0 22px 48px -20px rgba(180, 20, 32, 0.28);
+  --shadow-soft:
+    0 1px 2px rgba(18, 14, 21, 0.04), 0 12px 34px -18px rgba(18, 14, 21, 0.25);
+  --shadow-lift:
+    0 2px 4px rgba(18, 14, 21, 0.04), 0 22px 48px -20px rgba(180, 20, 32, 0.28);
 }
 
 .dark {
@@ -70,8 +72,12 @@
   --chart-3: #ff9aa0;
   --chart-4: #c41f2a;
   --chart-5: #6b6570;
-  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 18px 44px -24px rgba(0, 0, 0, 0.8);
-  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 26px 64px -26px rgba(255, 59, 71, 0.25);
+  --shadow-soft:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 18px 44px -24px rgba(0, 0, 0, 0.8);
+  --shadow-lift:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 26px 64px -26px rgba(255, 59, 71, 0.25);
 }
 
 @theme inline {
@@ -117,8 +123,12 @@
 
   html {
     scroll-behavior: smooth;
-    scrollbar-color: color-mix(in oklab, var(--primary) 55%, transparent) transparent;
+    scrollbar-color: color-mix(in oklab, var(--primary) 55%, transparent)
+      transparent;
     scrollbar-width: thin;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    font-size: 16px;
   }
 
   body {
@@ -126,6 +136,8 @@
     color: var(--foreground);
     font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   ::selection {
@@ -170,6 +182,81 @@
   background: var(--card);
   color: var(--card-foreground);
   box-shadow: var(--shadow-soft);
+}
+
+@utility liquid-glass {
+  border: 1px solid
+    color-mix(in oklab, var(--foreground) 8%, rgb(255 255 255 / 0.58));
+  background:
+    radial-gradient(
+      120% 100% at 8% 0%,
+      rgb(255 255 255 / 0.92) 0%,
+      rgb(255 255 255 / 0.34) 30%,
+      transparent 62%
+    ),
+    radial-gradient(
+      85% 90% at 100% 100%,
+      color-mix(in oklab, var(--primary) 13%, transparent) 0%,
+      transparent 62%
+    ),
+    color-mix(in oklab, var(--card) 74%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.78),
+    inset 0 -1px 0 rgb(255 255 255 / 0.2),
+    0 28px 90px -24px rgb(18 14 21 / 0.62),
+    0 0 0 1px rgb(255 255 255 / 0.18);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  backdrop-filter: blur(32px) saturate(180%);
+}
+
+.dark .liquid-glass {
+  border-color: rgb(255 255 255 / 0.12);
+  background:
+    radial-gradient(
+      120% 100% at 8% 0%,
+      rgb(255 255 255 / 0.12) 0%,
+      rgb(255 255 255 / 0.03) 32%,
+      transparent 64%
+    ),
+    radial-gradient(
+      85% 90% at 100% 100%,
+      color-mix(in oklab, var(--primary) 20%, transparent) 0%,
+      transparent 62%
+    ),
+    color-mix(in oklab, var(--card) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    inset 0 -1px 0 rgb(255 255 255 / 0.04),
+    0 34px 110px -30px rgb(0 0 0 / 0.92),
+    0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+.modal-backdrop {
+  background:
+    radial-gradient(
+      80% 70% at 50% 0%,
+      rgb(255 255 255 / 0.08) 0%,
+      transparent 58%
+    ),
+    rgb(10 8 12 / 0.56);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  backdrop-filter: blur(14px) saturate(125%);
+  animation: backdrop-in 220ms ease-out;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .liquid-glass {
+    background: var(--card);
+  }
 }
 
 @keyframes chart-draw {

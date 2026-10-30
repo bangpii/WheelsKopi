@@ -2,11 +2,10 @@ import { AppShell } from "@/components/app-shell";
 import { CategoryCard } from "@/components/dashboard/category-card";
 import { InsightGrid } from "@/components/dashboard/insight-grid";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
+import { OverviewHighlights } from "@/components/dashboard/overview-highlights";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { RevenueCard } from "@/components/dashboard/revenue-card";
 import { StockTable } from "@/components/dashboard/stock-table";
-
-
 
 export default function DashboardPage() {
   return (
@@ -25,14 +24,21 @@ export default function DashboardPage() {
               Dashboard Administrator
             </h1>
             <p className="mt-2 max-w-2xl text-[15px] text-muted-foreground">
-              Pantau stok ban, penjualan, transaksi, pelanggan, dan supplier dalam satu tampilan terpusat.
+              Pantau stok ban, penjualan, transaksi, pelanggan, dan supplier
+              dalam satu tampilan terpusat.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border border-border px-2.5 py-1">Update: hari ini</span>
-            <span className="rounded-full border border-border px-2.5 py-1">Tahun 2026</span>
+            <span className="rounded-full border border-border px-2.5 py-1">
+              Update: hari ini
+            </span>
+            <span className="rounded-full border border-border px-2.5 py-1">
+              Tahun 2026
+            </span>
           </div>
         </section>
+
+        <OverviewHighlights />
 
         <KpiGrid />
 
@@ -57,9 +63,12 @@ export default function DashboardPage() {
             aria-label="Aksi cepat"
           >
             <div>
-              <h2 className="font-display text-base font-semibold tracking-tight">Aksi Cepat</h2>
+              <h2 className="font-display text-base font-semibold tracking-tight">
+                Aksi Cepat
+              </h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                Cetak nota, buat PO, cek aging piutang, atau input penerimaan barang.
+                Cetak nota, buat PO, cek aging piutang, atau input penerimaan
+                barang.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -91,7 +100,10 @@ export default function DashboardPage() {
           </section>
         </section>
 
-        <section id="laporan" className="py-4 text-center text-xs text-muted-foreground">
+        <section
+          id="laporan"
+          className="py-4 text-center text-xs text-muted-foreground"
+        >
           © 2026 WheelsKopi. Sistem ERP Ban, Velg &amp; Aksesoris.
         </section>
       </div>

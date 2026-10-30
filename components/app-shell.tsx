@@ -42,7 +42,9 @@ export function AppShell({ children }: AppShellProps) {
         <Sidebar />
       </div>
 
-      <div className={`fixed inset-0 z-50 lg:hidden ${mobileOpen ? "" : "pointer-events-none"}`}>
+      <div
+        className={`fixed inset-0 z-50 lg:hidden ${mobileOpen ? "" : "pointer-events-none"}`}
+      >
         <div
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
@@ -72,7 +74,7 @@ export function AppShell({ children }: AppShellProps) {
 
       <div className="lg:pl-72">
         <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
-          <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 w-full items-center gap-3 px-3 sm:px-4 lg:px-6 xl:px-7 2xl:px-8">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -85,12 +87,23 @@ export function AppShell({ children }: AppShellProps) {
 
             <div className="flex min-w-0 items-center gap-2 lg:hidden">
               <span className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
-                <Image src="/logo.png" alt="WheelsKopi" fill sizes="36px" className="object-contain p-1" />
+                <Image
+                  src="/logo.png"
+                  alt="WheelsKopi"
+                  fill
+                  sizes="36px"
+                  className="object-contain p-1"
+                />
               </span>
-              <span className="font-display truncate text-sm font-semibold">WheelsKopi</span>
+              <span className="font-display truncate text-sm font-semibold">
+                WheelsKopi
+              </span>
             </div>
 
-            <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-sm lg:flex">
+            <nav
+              aria-label="Breadcrumb"
+              className="hidden min-w-0 items-center gap-1.5 text-sm lg:flex"
+            >
               <span className="text-muted-foreground">Dashboard</span>
               <ChevronRight className="size-3.5 text-muted-foreground/60" />
               <span className="truncate font-medium">Ringkasan</span>
@@ -128,15 +141,21 @@ export function AppShell({ children }: AppShellProps) {
                   AD
                 </span>
                 <span className="hidden leading-tight xl:block">
-                  <span className="block text-sm font-semibold">Admin Wheels</span>
-                  <span className="block text-[11px] text-muted-foreground">Administrator</span>
+                  <span className="block text-sm font-semibold">
+                    Admin Wheels
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Administrator
+                  </span>
                 </span>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="w-full px-3 py-6 sm:px-4 lg:px-6 xl:px-7 2xl:px-8 lg:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

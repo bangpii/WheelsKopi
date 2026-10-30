@@ -1,3 +1,11 @@
+import { suppliers as supplierRecords } from "./master-data";
+import {
+  monthlyPerformance,
+  profitRows,
+  selloutEntries,
+  stockListRecords,
+} from "./operations-data";
+
 export interface RevenuePoint {
   month: string;
   value: number;
@@ -10,7 +18,8 @@ export interface CategorySlice {
   color: string;
 }
 
-export type TireCategory = "Mobil" | "Motor" | "SUV" | "Truk";
+export type TireCategory =
+  "Mobil" | "Motor" | "SUV" | "Truk" | "Velg" | "Aksesori";
 
 export interface StockItem {
   id: string;
@@ -81,249 +90,272 @@ export const compactRupiah = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 1,
 });
 
+const brandPrefixes = [
+  "GT Radial",
+  "Bridgestone",
+  "Michelin",
+  "BFGoodrich",
+  "HRE",
+  "Rays",
+  "Vossen",
+];
+
+function splitProductName(product: string) {
+  const brand =
+    brandPrefixes.find((prefix) => product.startsWith(prefix)) ??
+    product.split(" ")[0];
+
+  const name = product.slice(brand.length).trim();
+
+  return { brand, name: name.length > 0 ? name : product };
+}
+
+function brandFromSupplier(name: string) {
+  if (name.includes("Michelin")) return "Michelin";
+
+  if (name.includes("Bridgestone")) return "Bridgestone";
+
+  if (name.includes("Mitra")) return "GT Radial";
+
+  if (name.includes("Velg")) return "Velg Nusantara";
+
+  return name.replace(/^PT |^CV /, "");
+}
+
+function stockCategory(item: string): TireCategory {
+  if (item === "Velg") return "Velg";
+
+  if (item === "Aksesori") return "Aksesori";
+
+  return "Mobil";
+}
+
+function percentage(value: number) {
+  return `${value.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
+
+const latestMonth = monthlyPerformance[monthlyPerformance.length - 1];
+
+const previousMonth = monthlyPerformance[monthlyPerformance.length - 2];
+
+const revenueChange =
+  ((latestMonth.revenue - previousMonth.revenue) / previousMonth.revenue) * 100;
+
+const orderChange =
+  ((latestMonth.orders - previousMonth.orders) / previousMonth.orders) * 100;
+
+const totalUnitsSold = selloutEntries.reduce(
+  (sum, entry) => sum + entry.qty,
+  0,
+);
+
+const totalStock = stockListRecords.reduce(
+  (sum, record) => sum + record.qty,
+  0,
+);
+
+const restockCount = stockListRecords.filter(
+  (record) => record.qty <= 10,
+).length;
+
+const stockChange = -((restockCount / stockListRecords.length) * 100);
+
+const revenueSpark = monthlyPerformance.map((month) =>
+  Math.round(month.revenue / 1_000_000),
+);
+
+const profitSpark = monthlyPerformance.map((month) =>
+  Math.round(month.profit / 1_000_000),
+);
+
 export const kpis: Kpi[] = [
   {
     label: "Total Pendapatan",
-    value: "Rp 128,4 jt",
-    change: "+12,8%",
-    trend: "up",
+    value: `Rp ${compactRupiah.format(latestMonth.revenue)}`,
+    change: `${revenueChange >= 0 ? "+" : ""}${percentage(revenueChange)}`,
+    trend: revenueChange >= 0 ? "up" : "down",
     hint: "dibanding bulan lalu",
-    spark: [42, 48, 45, 56, 52, 61, 58, 67, 72, 69, 78, 84],
+    spark: revenueSpark,
   },
   {
-    label: "Ban Terjual",
-    value: "1.284",
-    change: "+8,2%",
-    trend: "up",
+    label: "Unit Terjual",
+    value: totalUnitsSold.toLocaleString("id-ID"),
+    change: `${orderChange >= 0 ? "+" : ""}${percentage(orderChange)}`,
+    trend: orderChange >= 0 ? "up" : "down",
     hint: "unit bulan ini",
-    spark: [30, 36, 33, 41, 39, 46, 44, 52, 49, 57, 60, 64],
+    spark: profitSpark,
   },
   {
     label: "Stok Tersedia",
-    value: "3.842",
-    change: "-2,1%",
-    trend: "down",
+    value: totalStock.toLocaleString("id-ID"),
+    change: `${stockChange >= 0 ? "+" : ""}${percentage(stockChange)}`,
+    trend: stockChange >= 0 ? "up" : "down",
     hint: "unit di gudang",
-    spark: [70, 68, 72, 69, 66, 70, 65, 63, 66, 62, 60, 58],
+    spark: revenueSpark.slice().reverse(),
   },
   {
     label: "Perlu Restock",
-    value: "18",
-    change: "+4 SKU",
+    value: restockCount.toString(),
+    change: `${restockCount} SKU`,
     trend: "down",
-    hint: "di bawah stok minimum",
-    spark: [8, 9, 8, 10, 9, 12, 11, 13, 12, 15, 14, 18],
+    hint: "di bawah batas aman",
+    spark: [1, 2, 1, 3, 2, restockCount],
   },
 ];
 
-export const revenueMonthly: RevenuePoint[] = [
-  { month: "Jan", value: 62 },
-  { month: "Feb", value: 71 },
-  { month: "Mar", value: 68 },
-  { month: "Apr", value: 84 },
-  { month: "Mei", value: 79 },
-  { month: "Jun", value: 92 },
-  { month: "Jul", value: 101 },
-  { month: "Agu", value: 96 },
-  { month: "Sep", value: 112 },
-  { month: "Okt", value: 118 },
-  { month: "Nov", value: 124 },
-  { month: "Des", value: 128 },
-];
+export const revenueMonthly: RevenuePoint[] = monthlyPerformance.map(
+  (month) => ({
+    month: month.month,
+    value: Math.round(month.revenue / 1_000_000),
+  }),
+);
 
-export const categorySlices: CategorySlice[] = [
-  { label: "Ban Mobil", value: 59, percent: 46, color: "var(--chart-1)" },
-  { label: "Ban Motor", value: 31, percent: 24, color: "var(--chart-2)" },
-  { label: "Ban Truk", value: 23, percent: 18, color: "var(--chart-3)" },
-  { label: "Velg", value: 9, percent: 7, color: "var(--chart-4)" },
-  { label: "Aksesoris", value: 6, percent: 5, color: "var(--chart-5)" },
-];
+const categoryTotals = selloutEntries.reduce((groups, entry) => {
+  const revenue = entry.qty * entry.unitPrice;
+  const current = groups.get(entry.category) ?? { revenue: 0, qty: 0 };
+  current.revenue += revenue;
+  current.qty += entry.qty;
+  groups.set(entry.category, current);
 
-export const stockItems: StockItem[] = [
-  {
-    id: "WK-1001",
-    name: "Pilot Sport 4",
-    brand: "Michelin",
-    size: "205/55 R16",
-    category: "Mobil",
-    price: 1850000,
-    stock: 24,
+  return groups;
+}, new Map<string, { revenue: number; qty: number }>());
+
+const categoryRevenue = Array.from(categoryTotals.values()).reduce(
+  (sum, value) => sum + value.revenue,
+  0,
+);
+
+export const categorySlices: CategorySlice[] = Array.from(
+  categoryTotals.entries(),
+)
+  .map(([label, value], index) => ({
+    label,
+    value: Math.round(value.revenue / 1_000_000),
+    percent: Math.round((value.revenue / categoryRevenue) * 100),
+    color: `var(--chart-${(index % 5) + 1})`,
+  }))
+  .sort((a, b) => b.value - a.value);
+
+const soldByProduct = selloutEntries.reduce((map, entry) => {
+  map.set(entry.product, (map.get(entry.product) ?? 0) + entry.qty);
+
+  return map;
+}, new Map<string, number>());
+
+export const stockItems: StockItem[] = stockListRecords.map((record) => {
+  const { brand, name } = splitProductName(record.namaProduk);
+
+  return {
+    id: record.id,
+    name,
+    brand,
+    size: `${record.hole} ${record.ring}`.trim(),
+    category: stockCategory(record.item),
+    price: record.hargaJual,
+    stock: record.qty,
     minStock: 10,
-    sold: 186,
-  },
-  {
-    id: "WK-1002",
-    name: "Turanza T005",
-    brand: "Bridgestone",
-    size: "195/65 R15",
-    category: "Mobil",
-    price: 1320000,
-    stock: 8,
-    minStock: 12,
-    sold: 118,
-  },
-  {
-    id: "WK-1003",
-    name: "Champiro ECO",
-    brand: "GT Radial",
-    size: "185/70 R14",
-    category: "Mobil",
-    price: 720000,
-    stock: 42,
-    minStock: 15,
-    sold: 142,
-  },
-  {
-    id: "WK-1004",
-    name: "NR73",
-    brand: "IRC",
-    size: "80/90-14",
-    category: "Motor",
-    price: 285000,
-    stock: 96,
-    minStock: 30,
-    sold: 164,
-  },
-  {
-    id: "WK-1005",
-    name: "Sport XR",
-    brand: "FDR",
-    size: "90/80-14",
-    category: "Motor",
-    price: 310000,
-    stock: 12,
-    minStock: 20,
-    sold: 97,
-  },
-  {
-    id: "WK-1006",
-    name: "Roadster",
-    brand: "Swallow",
-    size: "195/70 R15",
-    category: "Mobil",
-    price: 890000,
-    stock: 18,
-    minStock: 10,
-    sold: 76,
-  },
-  {
-    id: "WK-1007",
-    name: "Desert Hawk",
-    brand: "Achilles",
-    size: "265/65 R17",
-    category: "SUV",
-    price: 1650000,
-    stock: 6,
-    minStock: 8,
-    sold: 54,
-  },
-  {
-    id: "WK-1008",
-    name: "Dynapro AT2",
-    brand: "Hankook",
-    size: "235/60 R16",
-    category: "SUV",
-    price: 1480000,
-    stock: 33,
-    minStock: 12,
-    sold: 68,
-  },
-  {
-    id: "WK-1009",
-    name: "Maxmiler",
-    brand: "GT Radial",
-    size: "185R14C",
-    category: "Truk",
-    price: 980000,
-    stock: 0,
-    minStock: 6,
-    sold: 41,
-  },
-  {
-    id: "WK-1010",
-    name: "R-268",
-    brand: "Bridgestone",
-    size: "1000-20",
-    category: "Truk",
-    price: 3450000,
-    stock: 14,
-    minStock: 6,
-    sold: 29,
-  },
-];
+    sold: soldByProduct.get(record.namaProduk) ?? 0,
+  };
+});
 
-export const transactions: Transaction[] = [
-  {
-    id: "TRX-2401",
-    customer: "Budi Santoso",
-    items: 4,
-    total: 5420000,
-    status: "Lunas",
-    method: "Transfer",
-    time: "10:24",
-  },
-  {
-    id: "TRX-2400",
-    customer: "Siti Aminah",
-    items: 2,
-    total: 1760000,
-    status: "Lunas",
-    method: "QRIS",
-    time: "09:58",
-  },
-  {
-    id: "TRX-2399",
-    customer: "Agus Wijaya",
-    items: 6,
-    total: 8930000,
-    status: "Proses",
-    method: "Transfer",
-    time: "09:41",
-  },
-  {
-    id: "TRX-2398",
-    customer: "Dewi Lestari",
-    items: 1,
-    total: 1320000,
-    status: "Lunas",
-    method: "Tunai",
-    time: "09:12",
-  },
-  {
-    id: "TRX-2397",
-    customer: "Rizky Pratama",
-    items: 3,
-    total: 3240000,
-    status: "Lunas",
-    method: "QRIS",
-    time: "08:47",
-  },
-];
+const transactionTimes = ["10:24", "09:58", "09:41", "09:12", "08:47"];
 
-export const topProducts: TopProduct[] = [
-  { name: "Pilot Sport 4", brand: "Michelin", sold: 186, revenue: 344100000, share: 92 },
-  { name: "NR73", brand: "IRC", sold: 164, revenue: 46740000, share: 78 },
-  { name: "Champiro ECO", brand: "GT Radial", sold: 142, revenue: 102240000, share: 64 },
-  { name: "Turanza T005", brand: "Bridgestone", sold: 118, revenue: 155760000, share: 51 },
-];
+const methodMap = {
+  Cash: "Tunai",
+  Transfer: "Transfer",
+  QRIS: "QRIS",
+  Tempo: "Transfer",
+} satisfies Record<string, PaymentMethod>;
 
-export const customers: Customer[] = [
-  { name: "Toko Ban Jaya", type: "Reseller", orders: 48, spend: 42600000, initials: "TJ" },
-  { name: "PT Armada Trans", type: "Perusahaan", orders: 32, spend: 38200000, initials: "AT" },
-  { name: "CV Mitra Jaya", type: "Perusahaan", orders: 27, spend: 24750000, initials: "MJ" },
-  { name: "Bengkel Cepat", type: "Bengkel", orders: 21, spend: 18600000, initials: "BC" },
-];
+export const transactions: Transaction[] = selloutEntries
+  .slice(-5)
+  .reverse()
+  .map((entry, index) => ({
+    id: entry.invoice,
+    customer: entry.customer,
+    items: entry.qty,
+    total: entry.qty * entry.unitPrice,
+    status: entry.status === "Lunas" ? "Lunas" : "Proses",
+    method: methodMap[entry.payment],
+    time: transactionTimes[index] ?? "08:00",
+  }));
 
-export const suppliers: Supplier[] = [
-  { name: "PT Michelin Indonesia", brand: "Michelin", leadTime: "3-5 hari", status: "Aktif" },
-  { name: "PT Bridgestone Tire", brand: "Bridgestone", leadTime: "2-4 hari", status: "Aktif" },
-  { name: "PT GT Radial", brand: "GT Radial", leadTime: "4-7 hari", status: "Aktif" },
-  { name: "PT IRC Inoac", brand: "IRC", leadTime: "5-8 hari", status: "Perlu Review" },
-];
+export const topProducts: TopProduct[] = profitRows
+  .slice()
+  .sort((a, b) => b.revenue - a.revenue)
+  .slice(0, 4)
+  .map((row) => {
+    const { brand, name } = splitProductName(row.product);
+
+    return {
+      name,
+      brand,
+      sold: row.qty,
+      revenue: row.revenue,
+      share: Math.round((row.profit / row.revenue) * 100),
+    };
+  });
+
+export const customers: Customer[] = Array.from(
+  selloutEntries.reduce((groups, entry) => {
+    const current = groups.get(entry.customer) ?? {
+      name: entry.customer,
+      orders: 0,
+      spend: 0,
+    };
+
+    current.orders += 1;
+    current.spend += entry.qty * entry.unitPrice;
+    groups.set(entry.customer, current);
+
+    return groups;
+  }, new Map<string, { name: string; orders: number; spend: number }>()),
+)
+  .map(([, value]) => {
+    const words = value.name.split(" ");
+
+    const initials = words
+      .slice(0, 2)
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase();
+
+    const type = value.name.includes("Toko")
+      ? "Reseller"
+      : value.name.includes("Bengkel")
+        ? "Bengkel"
+        : value.name.includes("Komunitas") || value.name.includes("Club")
+          ? "Komunitas"
+          : "Perorangan";
+
+    return {
+      name: value.name,
+      type,
+      orders: value.orders,
+      spend: value.spend,
+      initials,
+    };
+  })
+  .sort((a, b) => b.spend - a.spend)
+  .slice(0, 4);
+
+export const suppliers: Supplier[] = supplierRecords.map((supplier) => ({
+  name: supplier.name,
+  brand: brandFromSupplier(supplier.name),
+  leadTime: "3-5 hari",
+  status: "Aktif",
+}));
+
+const target = Math.ceil(latestMonth.revenue / 10_000_000) * 10_000_000;
+
+const monthLabel = new Intl.DateTimeFormat("id-ID", {
+  month: "long",
+  year: "numeric",
+}).format(new Date(2026, 5, 1));
 
 export const monthlyTarget = {
-  label: "Target Penjualan Oktober",
-  achieved: 128400000,
-  target: 150000000,
-  percent: 86,
+  label: `Target Penjualan ${monthLabel}`,
+  achieved: latestMonth.revenue,
+  target,
+  percent: Math.round((latestMonth.revenue / target) * 100),
 };

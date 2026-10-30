@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter, Poppins } from "next/font/google";
+import { DataProvider } from "@/lib/context/data-context";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -20,7 +21,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "WheelsKopi | Dashboard Administrator ERP",
-  description: "Sistem ERP WheelsKopi untuk manajemen stok ban, penjualan, transaksi, pelanggan dan supplier.",
+  description:
+    "Sistem ERP WheelsKopi untuk manajemen stok ban, penjualan, transaksi, pelanggan dan supplier.",
 };
 
 const themeInitScript = `
@@ -42,11 +44,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="id"
       suppressHydrationWarning
       className={`${poppins.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
+      style={{ textSizeAdjust: "100%" }}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-full bg-background font-sans text-foreground">{children}</body>
+      <body className="min-h-full bg-background font-sans text-foreground">
+        <DataProvider>{children}</DataProvider>
+      </body>
     </html>
   );
 }

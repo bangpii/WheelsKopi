@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Bell, ChevronRight, Menu, Search, X } from "lucide-react";
+import { ChevronRight, Menu, X } from "lucide-react";
 import { AosInit } from "./aos-init";
+import { GlobalSearch, NotificationBell, ProfileMenu } from "./header-tools";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -110,45 +111,13 @@ export function AppShell({ children }: AppShellProps) {
             </nav>
 
             <div className="ml-auto flex items-center gap-2">
-              <label className="hidden items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-muted-foreground transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-ring md:flex">
-                <Search className="size-4" />
-                <input
-                  type="search"
-                  placeholder="Cari produk, transaksi..."
-                  aria-label="Cari"
-                  className="w-44 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none lg:w-56"
-                />
-                <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  ⌘K
-                </kbd>
-              </label>
+              <GlobalSearch />
 
               <ThemeToggle />
 
-              <button
-                type="button"
-                aria-label="Notifikasi"
-                className="relative flex size-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <Bell className="size-[18px]" />
-                <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-primary ring-2 ring-card">
-                  <span className="absolute inset-0 rounded-full bg-primary soft-pulse" />
-                </span>
-              </button>
+              <NotificationBell />
 
-              <div className="ml-1 hidden items-center gap-2.5 border-l border-border pl-3 sm:flex">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 font-display text-xs font-semibold text-primary">
-                  AD
-                </span>
-                <span className="hidden leading-tight xl:block">
-                  <span className="block text-sm font-semibold">
-                    Admin Wheels
-                  </span>
-                  <span className="block text-[11px] text-muted-foreground">
-                    Administrator
-                  </span>
-                </span>
-              </div>
+              <ProfileMenu />
             </div>
           </div>
         </header>

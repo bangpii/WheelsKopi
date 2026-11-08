@@ -2,28 +2,44 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import type { Customer, Kpi, StockItem, Transaction } from "@/lib/dashboard-data";
-import { customers as demoCustomers, kpis as demoKpis, stockItems as demoStocks, transactions as demoTransactions } from "@/lib/dashboard-data";
+import type {
+  Customer,
+  Kpi,
+  StockItem,
+  Transaction,
+} from "@/lib/dashboard-data";
+import {
+  customers as demoCustomers,
+  kpis as demoKpis,
+  stockItems as demoStocks,
+  transactions as demoTransactions,
+} from "@/lib/dashboard-data";
+import type { DistribusiItem } from "@/lib/distribusi-data";
 import { initialDistribusiItems } from "@/lib/distribusi-data";
-import { rolePermissions as defaultPermissions, roles as defaultRoles, suppliers as seededSuppliers } from "@/lib/master-data";
+import {
+  rolePermissions as defaultPermissions,
+  roles as defaultRoles,
+  suppliers as seededSuppliers,
+} from "@/lib/master-data";
 import type { RolePermission, SupplierRecord } from "@/lib/master-data";
 
 export type { RolePermission, SupplierRecord } from "@/lib/master-data";
+export type { DistribusiItem } from "@/lib/distribusi-data";
 
-export interface Product {
-  id: string;
+/* ------------------------------------------------------------------ */
+/*  Product = DistribusiItem + metadata toko                          */
+/* ------------------------------------------------------------------ */
+
+export type Product = DistribusiItem & {
+  /** Alias kategori untuk kompatibilitas halaman lama. */
   kategoriUtama: "Others" | "Ban";
-  subKategori: string;
-  namaBarang: string;
-  ukuran: string;
-  ring: string;
-  hargaModalAsli: number;
-  hargaModalToko: number;
-  stok: number;
-  gambar: string;
-  supplier: string;
+  /** Riwayat perubahan (audit log). */
   history: string[];
-}
+};
+
+/* ------------------------------------------------------------------ */
+/*  Interface context                                                 */
+/* ------------------------------------------------------------------ */
 
 interface GlobalData {
   stockItems: StockItem[];
@@ -34,6 +50,7 @@ interface GlobalData {
   products: Product[];
   roles: string[];
   rolePermissions: RolePermission[];
+
   setStockItems: Dispatch<SetStateAction<StockItem[]>>;
   setTransactions: Dispatch<SetStateAction<Transaction[]>>;
   setKpis: Dispatch<SetStateAction<Kpi[]>>;
@@ -44,82 +61,140 @@ interface GlobalData {
   setRolePermissions: Dispatch<SetStateAction<RolePermission[]>>;
 }
 
-const seededProducts: Product[] = initialDistribusiItems.map((item) => ({
-  id: item.id,
-  kategoriUtama: item.kategori,
-  subKategori: item.subKategori,
-  namaBarang: item.namaBarang,
-  ukuran: item.ukuran,
-  ring: item.ring,
-  hargaModalAsli: item.hargaModalAsli,
-  hargaModalToko: item.hargaModalToko,
-  stok: item.stok,
-  gambar: item.gambar,
-  supplier: item.supplier,
-  history: ["Data awal demo"],
-}));
+/* ------------------------------------------------------------------ */
+/*  Konversi DistribusiItem ↔ Product                                 */
+/* ------------------------------------------------------------------ */
 
-const DataContext = createContext<GlobalData | undefined>(undefined);
+/** DistribusiItem → Product (untuk disimpan di state global). */
+export function toProduct(
+  item: DistribusiItem,
+  historyEntry = "Ditambahkan dari halaman Distribusi",
+): Product {
+  return {
+    ...item,
+    kategoriUtama: item.kategori,
+    history: [
+      `[${new Date().toLocaleString("id-ID")}] ${historyEntry}`,
+    ],
+  };
+}
+
+/** Product → DistribusiItem (untuk render di halaman distribusi). */
+export function toDistribusiItem(product: Product): DistribusiItem {
+  // Buang field yang bukan bagian dari DistribusiItem
+  const {
+    kategoriUtama: _kategoriUtama,
+    history: _history,
+    ...rest
+  } = product;
+  return rest;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Seed                                                              */
+/* ------------------------------------------------------------------ */
+
+const seededProducts: Product[] = initialDistribusiItems.map((item) =>
+  toProduct(item, "Data awal demo"),
+);
+
+/* ------------------------------------------------------------------ */
+/*  localStorage helper                                               */
+/* ------------------------------------------------------------------ */
+
+const STORAGE_KEYS = {
+  stocks: "wheelskopi_v2_stocks",
+  transactions: "wheelskopi_v2_transactions",
+  kpis: "wheelskopi_v2_kpis",
+  customers: "wheelskopi_v2_customers",
+  suppliers: "wheelskopi_v2_suppliers",
+  products: "wheelskopi_v2_products",
+  roles: "wheelskopi_v2_roles",
+  permissions: "wheelskopi_v2_permissions",
+} as const;
 
 function readStored<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
+  if (typeof window === "undefined") return fallback;
 
   const raw = localStorage.getItem(key);
-
-  if (!raw) {
-    return fallback;
-  }
+  if (!raw) return fallback;
 
   try {
-    // SAFETY: localStorage values are written by this app using the requested shape.
     return JSON.parse(raw) as T;
   } catch {
     return fallback;
   }
 }
 
-export function DataProvider({ children }: { children: ReactNode }) {
-  const [stockItems, setStockItems] = useState<StockItem[]>(() => readStored("wheelskopi_v2_stocks", demoStocks));
-  const [transactions, setTransactions] = useState<Transaction[]>(() => readStored("wheelskopi_v2_transactions", demoTransactions));
-  const [kpis, setKpis] = useState<Kpi[]>(() => readStored("wheelskopi_v2_kpis", demoKpis));
-  const [customers, setCustomers] = useState<Customer[]>(() => readStored("wheelskopi_v2_customers", demoCustomers));
-  const [suppliers, setSuppliers] = useState<SupplierRecord[]>(() => readStored("wheelskopi_v2_suppliers", seededSuppliers));
-  const [products, setProducts] = useState<Product[]>(() => readStored("wheelskopi_v2_products", seededProducts));
-  const [roles, setRoles] = useState<string[]>(() => readStored("wheelskopi_v2_roles", defaultRoles));
-  const [rolePermissions, setRolePermissions] = useState<RolePermission[]>(() => readStored("wheelskopi_v2_permissions", defaultPermissions));
+/* ------------------------------------------------------------------ */
+/*  Context & Provider                                                */
+/* ------------------------------------------------------------------ */
 
+const DataContext = createContext<GlobalData | undefined>(undefined);
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const [stockItems, setStockItems] = useState<StockItem[]>(() =>
+    readStored(STORAGE_KEYS.stocks, demoStocks),
+  );
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    readStored(STORAGE_KEYS.transactions, demoTransactions),
+  );
+  const [kpis, setKpis] = useState<Kpi[]>(() =>
+    readStored(STORAGE_KEYS.kpis, demoKpis),
+  );
+  const [customers, setCustomers] = useState<Customer[]>(() =>
+    readStored(STORAGE_KEYS.customers, demoCustomers),
+  );
+  const [suppliers, setSuppliers] = useState<SupplierRecord[]>(() =>
+    readStored(STORAGE_KEYS.suppliers, seededSuppliers),
+  );
+  const [products, setProducts] = useState<Product[]>(() =>
+    readStored(STORAGE_KEYS.products, seededProducts),
+  );
+  const [roles, setRoles] = useState<string[]>(() =>
+    readStored(STORAGE_KEYS.roles, defaultRoles),
+  );
+  const [rolePermissions, setRolePermissions] = useState<RolePermission[]>(
+    () => readStored(STORAGE_KEYS.permissions, defaultPermissions),
+  );
+
+  /* Persist ke localStorage */
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_stocks", JSON.stringify(stockItems));
+    localStorage.setItem(STORAGE_KEYS.stocks, JSON.stringify(stockItems));
   }, [stockItems]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_transactions", JSON.stringify(transactions));
+    localStorage.setItem(
+      STORAGE_KEYS.transactions,
+      JSON.stringify(transactions),
+    );
   }, [transactions]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_kpis", JSON.stringify(kpis));
+    localStorage.setItem(STORAGE_KEYS.kpis, JSON.stringify(kpis));
   }, [kpis]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_customers", JSON.stringify(customers));
+    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
   }, [customers]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_suppliers", JSON.stringify(suppliers));
+    localStorage.setItem(STORAGE_KEYS.suppliers, JSON.stringify(suppliers));
   }, [suppliers]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_products", JSON.stringify(products));
+    localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_roles", JSON.stringify(roles));
+    localStorage.setItem(STORAGE_KEYS.roles, JSON.stringify(roles));
   }, [roles]);
 
   useEffect(() => {
-    localStorage.setItem("wheelskopi_v2_permissions", JSON.stringify(rolePermissions));
+    localStorage.setItem(
+      STORAGE_KEYS.permissions,
+      JSON.stringify(rolePermissions),
+    );
   }, [rolePermissions]);
 
   return (
@@ -150,10 +225,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 export function useData() {
   const context = useContext(DataContext);
-
   if (!context) {
     throw new Error("useData harus digunakan di dalam DataProvider");
   }
-
   return context;
 }

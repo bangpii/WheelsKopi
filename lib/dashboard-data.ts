@@ -1,10 +1,4 @@
-import { suppliers as supplierRecords } from "./master-data";
-import {
-  monthlyPerformance,
-  profitRows,
-  selloutEntries,
-  stockListRecords,
-} from "./operations-data";
+// lib/dashboard-data.ts
 
 export interface RevenuePoint {
   month: string;
@@ -19,7 +13,12 @@ export interface CategorySlice {
 }
 
 export type TireCategory =
-  "Mobil" | "Motor" | "SUV" | "Truk" | "Velg" | "Aksesori";
+  | "Mobil"
+  | "Motor"
+  | "SUV"
+  | "Truk"
+  | "Velg"
+  | "Aksesori";
 
 export interface StockItem {
   id: string;
@@ -34,7 +33,6 @@ export interface StockItem {
 }
 
 export type TransactionStatus = "Lunas" | "Proses" | "Batal";
-
 export type PaymentMethod = "Transfer" | "QRIS" | "Tunai";
 
 export interface Transaction {
@@ -45,6 +43,7 @@ export interface Transaction {
   status: TransactionStatus;
   method: PaymentMethod;
   time: string;
+  tanggal?: string;
 }
 
 export interface TopProduct {
@@ -79,6 +78,7 @@ export interface Kpi {
   spark: number[];
 }
 
+// Format Mata Uang
 export const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",
@@ -90,272 +90,130 @@ export const compactRupiah = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 1,
 });
 
-const brandPrefixes = [
-  "GT Radial",
-  "Bridgestone",
-  "Michelin",
-  "BFGoodrich",
-  "HRE",
-  "Rays",
-  "Vossen",
+/* ------------------------------------------------------------------ */
+/*  DATA KOSONG (MULAI DARI NOL)                                      */
+/* ------------------------------------------------------------------ */
+
+// 1. Data Transaksi (KOSONG)
+export const transactions: Transaction[] = [];
+
+// 2. Data Grafik Pendapatan (KOSONG)
+export const monthlyPerformance = [
+  { month: "Jan", revenue: 0, orders: 0, profit: 0 },
+  { month: "Feb", revenue: 0, orders: 0, profit: 0 },
+  { month: "Mar", revenue: 0, orders: 0, profit: 0 },
+  { month: "Apr", revenue: 0, orders: 0, profit: 0 },
+  { month: "Mei", revenue: 0, orders: 0, profit: 0 },
+  { month: "Jun", revenue: 0, orders: 0, profit: 0 },
+  { month: "Jul", revenue: 0, orders: 0, profit: 0 },
+  { month: "Ags", revenue: 0, orders: 0, profit: 0 },
+  { month: "Sep", revenue: 0, orders: 0, profit: 0 },
+  { month: "Okt", revenue: 0, orders: 0, profit: 0 },
+  { month: "Nov", revenue: 0, orders: 0, profit: 0 },
+  { month: "Des", revenue: 0, orders: 0, profit: 0 },
 ];
 
-function splitProductName(product: string) {
-  const brand =
-    brandPrefixes.find((prefix) => product.startsWith(prefix)) ??
-    product.split(" ")[0];
+export const revenueMonthly: RevenuePoint[] = monthlyPerformance.map((m) => ({
+  month: m.month,
+  value: m.revenue,
+}));
 
-  const name = product.slice(brand.length).trim();
+// 3. Data Stok (Hanya Data Master, Tanpa Penjualan)
+export const stockItems: StockItem[] = [
+  {
+    id: "WK-8001",
+    name: "Ecopia 195/65 R15",
+    brand: "Bridgestone",
+    size: "195/65 R15",
+    category: "Mobil",
+    price: 1050000,
+    stock: 24,
+    minStock: 10,
+    sold: 0,
+  },
+  {
+    id: "WK-8002",
+    name: "Pilot Sport 225/45 R18",
+    brand: "Michelin",
+    size: "225/45 R18",
+    category: "Mobil",
+    price: 1800000,
+    stock: 10,
+    minStock: 10,
+    sold: 0,
+  },
+  {
+    id: "WK-9001",
+    name: "SSW S280",
+    brand: "SSW",
+    size: "R18",
+    category: "Velg",
+    price: 2950000,
+    stock: 12,
+    minStock: 5,
+    sold: 0,
+  }
+];
 
-  return { brand, name: name.length > 0 ? name : product };
-}
+// 4. Data Supplier (Biarkan tetap ada untuk dropdown form)
+export const suppliers: Supplier[] = [
+  { name: "PT Michelin Indonesia", brand: "Michelin", leadTime: "3-5 hari", status: "Aktif" },
+  { name: "PT Bridgestone Tire", brand: "Bridgestone", leadTime: "3-5 hari", status: "Aktif" },
+  { name: "CV Mitra Ban Sejahtera", brand: "GT Radial", leadTime: "3-5 hari", status: "Aktif" },
+  { name: "CV Velg Nusantara", brand: "SSW", leadTime: "3-5 hari", status: "Aktif" },
+];
 
-function brandFromSupplier(name: string) {
-  if (name.includes("Michelin")) return "Michelin";
+// 5. Data Customer (KOSONG)
+export const customers: Customer[] = [];
 
-  if (name.includes("Bridgestone")) return "Bridgestone";
+// 6. Data Tambahan (Dummy agar UI tidak error)
+export const categorySlices: CategorySlice[] = [
+  { label: "Ban", value: 0, percent: 0, color: "var(--chart-1)" },
+  { label: "Velg", value: 0, percent: 0, color: "var(--chart-2)" },
+  { label: "Aksesori", value: 0, percent: 0, color: "var(--chart-3)" },
+];
 
-  if (name.includes("Mitra")) return "GT Radial";
+export const topProducts: TopProduct[] = [];
 
-  if (name.includes("Velg")) return "Velg Nusantara";
-
-  return name.replace(/^PT |^CV /, "");
-}
-
-function stockCategory(item: string): TireCategory {
-  if (item === "Velg") return "Velg";
-
-  if (item === "Aksesori") return "Aksesori";
-
-  return "Mobil";
-}
-
-function percentage(value: number) {
-  return `${value.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-}
-
-const latestMonth = monthlyPerformance[monthlyPerformance.length - 1];
-
-const previousMonth = monthlyPerformance[monthlyPerformance.length - 2];
-
-const revenueChange =
-  ((latestMonth.revenue - previousMonth.revenue) / previousMonth.revenue) * 100;
-
-const orderChange =
-  ((latestMonth.orders - previousMonth.orders) / previousMonth.orders) * 100;
-
-const totalUnitsSold = selloutEntries.reduce(
-  (sum, entry) => sum + entry.qty,
-  0,
-);
-
-const totalStock = stockListRecords.reduce(
-  (sum, record) => sum + record.qty,
-  0,
-);
-
-const restockCount = stockListRecords.filter(
-  (record) => record.qty <= 10,
-).length;
-
-const stockChange = -((restockCount / stockListRecords.length) * 100);
-
-const revenueSpark = monthlyPerformance.map((month) =>
-  Math.round(month.revenue / 1_000_000),
-);
-
-const profitSpark = monthlyPerformance.map((month) =>
-  Math.round(month.profit / 1_000_000),
-);
-
+// 7. KPI (Di-set ke 0 semua)
 export const kpis: Kpi[] = [
   {
     label: "Total Pendapatan",
-    value: `Rp ${compactRupiah.format(latestMonth.revenue)}`,
-    change: `${revenueChange >= 0 ? "+" : ""}${percentage(revenueChange)}`,
-    trend: revenueChange >= 0 ? "up" : "down",
-    hint: "dibanding bulan lalu",
-    spark: revenueSpark,
+    value: rupiah.format(0),
+    change: "0%",
+    trend: "up",
+    hint: "belum ada transaksi",
+    spark: [0, 0, 0, 0, 0, 0, 0],
   },
   {
     label: "Unit Terjual",
-    value: totalUnitsSold.toLocaleString("id-ID"),
-    change: `${orderChange >= 0 ? "+" : ""}${percentage(orderChange)}`,
-    trend: orderChange >= 0 ? "up" : "down",
-    hint: "unit bulan ini",
-    spark: profitSpark,
+    value: "0",
+    change: "0%",
+    trend: "up",
+    hint: "belum ada penjualan",
+    spark: [0, 0, 0, 0, 0, 0, 0],
   },
   {
-    label: "Stok Tersedia",
-    value: totalStock.toLocaleString("id-ID"),
-    change: `${stockChange >= 0 ? "+" : ""}${percentage(stockChange)}`,
-    trend: stockChange >= 0 ? "up" : "down",
-    hint: "unit di gudang",
-    spark: revenueSpark.slice().reverse(),
+    label: "Total Produk",
+    value: stockItems.length.toString(),
+    change: "0%",
+    trend: "up",
+    hint: "produk terdaftar",
+    spark: [3, 3, 3, 3, 3, 3, 3],
   },
   {
     label: "Perlu Restock",
-    value: restockCount.toString(),
-    change: `${restockCount} SKU`,
+    value: "0",
+    change: "0%",
     trend: "down",
-    hint: "di bawah batas aman",
-    spark: [1, 2, 1, 3, 2, restockCount],
+    hint: "SKU di bawah batas",
+    spark: [0, 0, 0, 0, 0, 0, 0],
   },
 ];
 
-export const revenueMonthly: RevenuePoint[] = monthlyPerformance.map(
-  (month) => ({
-    month: month.month,
-    value: Math.round(month.revenue / 1_000_000),
-  }),
-);
-
-const categoryTotals = selloutEntries.reduce((groups, entry) => {
-  const revenue = entry.qty * entry.unitPrice;
-  const current = groups.get(entry.category) ?? { revenue: 0, qty: 0 };
-  current.revenue += revenue;
-  current.qty += entry.qty;
-  groups.set(entry.category, current);
-
-  return groups;
-}, new Map<string, { revenue: number; qty: number }>());
-
-const categoryRevenue = Array.from(categoryTotals.values()).reduce(
-  (sum, value) => sum + value.revenue,
-  0,
-);
-
-export const categorySlices: CategorySlice[] = Array.from(
-  categoryTotals.entries(),
-)
-  .map(([label, value], index) => ({
-    label,
-    value: Math.round(value.revenue / 1_000_000),
-    percent: Math.round((value.revenue / categoryRevenue) * 100),
-    color: `var(--chart-${(index % 5) + 1})`,
-  }))
-  .sort((a, b) => b.value - a.value);
-
-const soldByProduct = selloutEntries.reduce((map, entry) => {
-  map.set(entry.product, (map.get(entry.product) ?? 0) + entry.qty);
-
-  return map;
-}, new Map<string, number>());
-
-export const stockItems: StockItem[] = stockListRecords.map((record) => {
-  const { brand, name } = splitProductName(record.namaProduk);
-
-  return {
-    id: record.id,
-    name,
-    brand,
-    size: `${record.hole} ${record.ring}`.trim(),
-    category: stockCategory(record.item),
-    price: record.hargaJual,
-    stock: record.qty,
-    minStock: 10,
-    sold: soldByProduct.get(record.namaProduk) ?? 0,
-  };
-});
-
-const transactionTimes = ["10:24", "09:58", "09:41", "09:12", "08:47"];
-
-const methodMap = {
-  Cash: "Tunai",
-  Transfer: "Transfer",
-  QRIS: "QRIS",
-  Tempo: "Transfer",
-} satisfies Record<string, PaymentMethod>;
-
-export const transactions: Transaction[] = selloutEntries
-  .slice(-5)
-  .reverse()
-  .map((entry, index) => ({
-    id: entry.invoice,
-    customer: entry.customer,
-    items: entry.qty,
-    total: entry.qty * entry.unitPrice,
-    status: entry.status === "Lunas" ? "Lunas" : "Proses",
-    method: methodMap[entry.payment],
-    time: transactionTimes[index] ?? "08:00",
-  }));
-
-export const topProducts: TopProduct[] = profitRows
-  .slice()
-  .sort((a, b) => b.revenue - a.revenue)
-  .slice(0, 4)
-  .map((row) => {
-    const { brand, name } = splitProductName(row.product);
-
-    return {
-      name,
-      brand,
-      sold: row.qty,
-      revenue: row.revenue,
-      share: Math.round((row.profit / row.revenue) * 100),
-    };
-  });
-
-export const customers: Customer[] = Array.from(
-  selloutEntries.reduce((groups, entry) => {
-    const current = groups.get(entry.customer) ?? {
-      name: entry.customer,
-      orders: 0,
-      spend: 0,
-    };
-
-    current.orders += 1;
-    current.spend += entry.qty * entry.unitPrice;
-    groups.set(entry.customer, current);
-
-    return groups;
-  }, new Map<string, { name: string; orders: number; spend: number }>()),
-)
-  .map(([, value]) => {
-    const words = value.name.split(" ");
-
-    const initials = words
-      .slice(0, 2)
-      .map((word) => word.charAt(0))
-      .join("")
-      .toUpperCase();
-
-    const type = value.name.includes("Toko")
-      ? "Reseller"
-      : value.name.includes("Bengkel")
-        ? "Bengkel"
-        : value.name.includes("Komunitas") || value.name.includes("Club")
-          ? "Komunitas"
-          : "Perorangan";
-
-    return {
-      name: value.name,
-      type,
-      orders: value.orders,
-      spend: value.spend,
-      initials,
-    };
-  })
-  .sort((a, b) => b.spend - a.spend)
-  .slice(0, 4);
-
-export const suppliers: Supplier[] = supplierRecords.map((supplier) => ({
-  name: supplier.name,
-  brand: brandFromSupplier(supplier.name),
-  leadTime: "3-5 hari",
-  status: "Aktif",
-}));
-
-const target = Math.ceil(latestMonth.revenue / 10_000_000) * 10_000_000;
-
-const monthLabel = new Intl.DateTimeFormat("id-ID", {
-  month: "long",
-  year: "numeric",
-}).format(new Date(2026, 5, 1));
-
 export const monthlyTarget = {
-  label: `Target Penjualan ${monthLabel}`,
-  achieved: latestMonth.revenue,
-  target,
-  percent: Math.round((latestMonth.revenue / target) * 100),
+  label: "Target Penjualan",
+  achieved: 0,
+  target: 80000000,
+  percent: 0,
 };

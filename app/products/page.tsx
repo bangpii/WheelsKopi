@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Eye,
@@ -11,21 +11,17 @@ import {
   Trash2,
   TriangleAlert,
   X,
+  Pencil,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { checkPermission } from "@/lib/check-permission";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData, type Product } from "@/lib/context/data-context";
 
-function stockLabel(stok: number) {
-  if (stok <= 0) {
-    return "Habis";
-  }
-
-  if (stok <= 10) {
-    return "Menipis";
-  }
-
+// FUNGSI BARU: Status Stok Statis (Pengganti getStockStatusInfo)
+function statusOf(stok: number) {
+  if (stok < 2) return "Wajib Pesan";
+  if (stok <= 5) return "Menipis";
   return "Tersedia";
 }
 
@@ -33,16 +29,21 @@ export default function ProductsPage() {
   const { products, setProducts, stockItems, setStockItems } = useData();
   const [search, setSearch] = useState("");
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [mounted, setMounted] = useState(false);
+  
   const canDelete = checkPermission("product", "delete");
+
+  // Perbaikan Hydration Error
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleDelete = (product: Product) => {
     const confirmed = window.confirm(
       `Hapus produk "${product.namaBarang}" dari inventaris?`,
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setProducts(products.filter((entry) => entry.id !== product.id));
     setStockItems(stockItems.filter((entry) => entry.id !== product.id));
@@ -50,13 +51,25 @@ export default function ProductsPage() {
 
   const keyword = search.trim().toLowerCase();
 
-  const filteredProducts = products.filter(
-    (product) =>
-      keyword.length === 0 ||
-      product.namaBarang.toLowerCase().includes(keyword) ||
-      product.subKategori.toLowerCase().includes(keyword) ||
-      product.supplier.toLowerCase().includes(keyword),
-  );
+  const filteredProducts = products.filter((product) => {
+    const searchTarget = [
+      product.namaBarang,
+      product.subKategori,
+      product.supplier,
+      product.merekBan,
+      product.merekProduk,
+      product.ukuran,
+      product.ukuranTapak,
+      product.ukuranTinggi,
+      product.ring,
+      product.item,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return keyword.length === 0 || searchTarget.includes(keyword);
+  });
 
   return (
     <AppShell>
@@ -70,8 +83,7 @@ export default function ProductsPage() {
               Management Product Store
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Daftar inventaris produk lengkap dengan gambar, spesifikasi, dan
-              riwayat.
+              Daftar inventaris produk lengkap dengan gambar, spesifikasi, dan riwayat.
             </p>
           </div>
           <Link
@@ -100,7 +112,7 @@ export default function ProductsPage() {
             <Package className="size-4 text-primary" />
             Total Produk:{" "}
             <span className="font-semibold text-foreground">
-              {products.length}
+              {mounted ? products.length : "-"}
             </span>
           </div>
           <div className="relative w-full sm:w-80">
@@ -110,14 +122,14 @@ export default function ProductsPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="w-full rounded-xl border border-border bg-background/70 py-2.5 pr-3 pl-9 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50 focus:ring-2 focus:ring-ring/30"
-              placeholder="Cari produk, merek, atau supplier..."
+              placeholder="Cari produk, merek, ukuran, supplier..."
             />
           </div>
         </div>
 
         <div className="surface overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-left text-sm">
+            <table className="w-full min-w-[1000px] text-left text-sm">
               <thead className="border-b border-border bg-muted/50 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
                 <tr>
                   <th className="w-16 px-5 py-3.5 text-center font-semibold">
@@ -138,7 +150,15 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {filteredProducts.length === 0 ? (
+                {!mounted ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={7} className="px-6 py-3">
+                        <div className="h-10 animate-pulse rounded-lg bg-muted/60" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-16">
                       <div className="flex flex-col items-center justify-center gap-3 text-center">
@@ -146,9 +166,7 @@ export default function ProductsPage() {
                           <Package className="size-6" />
                         </span>
                         <div>
-                          <p className="text-sm font-semibold">
-                            Belum ada produk
-                          </p>
+                          <p className="text-sm font-semibold">Belum ada produk</p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             Tambahkan barang baru melalui halaman Distribusi.
                           </p>
@@ -165,12 +183,13 @@ export default function ProductsPage() {
                   </tr>
                 ) : (
                   filteredProducts.map((product) => {
-                    const label = stockLabel(product.stok);
+                    // GUNAKAN FUNGSI BARU
+                    const stockStatus = statusOf(product.stok);
 
                     const statusClass =
-                      label === "Habis"
+                      stockStatus === "Wajib Pesan"
                         ? "bg-danger-soft text-danger"
-                        : label === "Menipis"
+                        : stockStatus === "Menipis"
                           ? "bg-warning-soft text-warning"
                           : "bg-success-soft text-success";
 
@@ -183,9 +202,7 @@ export default function ProductsPage() {
                           {product.gambar ? (
                             <div
                               className="size-10 rounded-lg border border-border bg-muted bg-cover bg-center"
-                              style={{
-                                backgroundImage: `url(${product.gambar})`,
-                              }}
+                              style={{ backgroundImage: `url(${product.gambar})` }}
                             />
                           ) : (
                             <div className="flex size-10 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
@@ -204,12 +221,15 @@ export default function ProductsPage() {
                             {product.subKategori} • {product.supplier}
                           </p>
                         </td>
+                        
                         <td className="px-5 py-3.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
                           {rupiah.format(product.hargaModalAsli)}
                         </td>
+                        
                         <td className="px-5 py-3.5 text-right font-mono text-sm font-semibold text-primary tabular-nums">
                           {rupiah.format(product.hargaModalToko)}
                         </td>
+
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex flex-col items-end gap-1">
                             <span className="font-mono font-semibold tabular-nums">
@@ -218,7 +238,7 @@ export default function ProductsPage() {
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}
                             >
-                              {label}
+                              {stockStatus}
                             </span>
                           </div>
                         </td>
@@ -228,17 +248,22 @@ export default function ProductsPage() {
                               type="button"
                               onClick={() => setViewProduct(product)}
                               title="Lihat detail"
-                              aria-label={`Lihat ${product.namaBarang}`}
                               className="rounded-xl border border-transparent p-2 text-muted-foreground transition-colors hover:border-warning/20 hover:bg-warning-soft hover:text-warning"
                             >
                               <Eye className="size-4" />
                             </button>
+                            <Link
+                              href={`/distribusi`}
+                              title="Edit Produk"
+                              className="rounded-xl border border-transparent p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
+                            >
+                              <Pencil className="size-4" />
+                            </Link>
                             {canDelete && (
                               <button
                                 type="button"
                                 onClick={() => handleDelete(product)}
                                 title="Hapus"
-                                aria-label={`Hapus ${product.namaBarang}`}
                                 className="rounded-xl border border-transparent p-2 text-muted-foreground transition-colors hover:border-danger/20 hover:bg-danger-soft hover:text-danger"
                               >
                                 <Trash2 className="size-4" />
@@ -256,8 +281,9 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Modal Detail Produk */}
       {viewProduct && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 sm:p-6">
           <div
             aria-hidden="true"
             onClick={() => setViewProduct(null)}
@@ -266,7 +292,6 @@ export default function ProductsPage() {
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="product-detail-title"
             className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[28px] liquid-glass"
           >
             <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
@@ -274,10 +299,7 @@ export default function ProductsPage() {
                 <p className="font-mono text-[10px] tracking-[0.26em] text-primary uppercase">
                   Detail
                 </p>
-                <h2
-                  id="product-detail-title"
-                  className="font-display text-lg font-semibold tracking-tight"
-                >
+                <h2 className="font-display text-lg font-semibold tracking-tight">
                   {viewProduct.namaBarang}
                 </h2>
               </div>
@@ -309,20 +331,14 @@ export default function ProductsPage() {
               <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
                 <div>
                   <p className="text-[11px] text-muted-foreground">Kategori</p>
-                  <p className="mt-0.5 font-medium">
-                    {viewProduct.kategoriUtama}
-                  </p>
+                  <p className="mt-0.5 font-medium">{viewProduct.kategoriUtama}</p>
                 </div>
                 <div>
                   <p className="text-[11px] text-muted-foreground">Merek</p>
-                  <p className="mt-0.5 font-medium">
-                    {viewProduct.subKategori}
-                  </p>
+                  <p className="mt-0.5 font-medium">{viewProduct.subKategori}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Spesifikasi
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Spesifikasi</p>
                   <p className="mt-0.5 font-medium">
                     {viewProduct.ukuran}
                     {viewProduct.ring ? ` / ${viewProduct.ring}` : ""}
@@ -333,17 +349,13 @@ export default function ProductsPage() {
                   <p className="mt-0.5 font-medium">{viewProduct.supplier}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Harga Modal
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Harga Modal</p>
                   <p className="mt-0.5 font-mono tabular-nums">
                     {rupiah.format(viewProduct.hargaModalAsli)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Harga Jual
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Harga Jual</p>
                   <p className="mt-0.5 font-mono font-semibold text-primary tabular-nums">
                     {rupiah.format(viewProduct.hargaModalToko)}
                   </p>
@@ -355,9 +367,10 @@ export default function ProductsPage() {
                 <div>
                   <p className="text-[11px] text-muted-foreground">Status</p>
                   <p className="mt-0.5 inline-flex items-center gap-1 font-medium">
-                    {stockLabel(viewProduct.stok)}
-                    {viewProduct.stok <= 10 && (
-                      <TriangleAlert className="size-3.5 text-warning" />
+                    {/* GUNAKAN FUNGSI BARU */}
+                    {statusOf(viewProduct.stok)}
+                    {viewProduct.stok < 2 && (
+                      <TriangleAlert className="size-3.5 text-danger" />
                     )}
                   </p>
                 </div>

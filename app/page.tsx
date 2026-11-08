@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { CalendarDays, Filter, RotateCcw, Trash2 } from "lucide-react"; // Tambahkan Trash2
 import { AppShell } from "@/components/app-shell";
 import { CategoryCard } from "@/components/dashboard/category-card";
 import { InsightGrid } from "@/components/dashboard/insight-grid";
@@ -8,13 +12,49 @@ import { RevenueCard } from "@/components/dashboard/revenue-card";
 import { StockTable } from "@/components/dashboard/stock-table";
 
 export default function DashboardPage() {
+  const [draftStartDate, setDraftStartDate] = useState("");
+  const [draftEndDate, setDraftEndDate] = useState("");
+
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handleApplyFilter = () => {
+    setStartDate(draftStartDate);
+    setEndDate(draftEndDate);
+  };
+
+  const handleResetFilter = () => {
+    setDraftStartDate("");
+    setDraftEndDate("");
+    setStartDate("");
+    setEndDate("");
+  };
+
+  // FUNGSI UNTUK MENGHAPUS SEMUA DATA (RESET)
+  const handleResetData = () => {
+    const confirmed = window.confirm(
+      "Apakah Anda yakin ingin menghapus SEMUA data aplikasi? Data produk, transaksi, dan riwayat akan hilang permanen."
+    );
+
+    if (confirmed) {
+      // Hapus semua data yang berawalan wheelskopi_ di Local Storage
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("wheelskopi_")) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Refresh halaman agar data kembali ke 0
+      window.location.reload();
+    }
+  };
+
   return (
     <AppShell>
       <div className="space-y-6 lg:space-y-8">
         <section
           id="overview"
           data-aos="fade-up"
-          className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
+          className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between"
         >
           <div>
             <p className="font-mono text-[11px] tracking-[0.28em] text-primary uppercase">
@@ -28,28 +68,76 @@ export default function DashboardPage() {
               dalam satu tampilan terpusat.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full border border-border px-2.5 py-1">
-              Update: hari ini
-            </span>
-            <span className="rounded-full border border-border px-2.5 py-1">
-              Tahun 2026
-            </span>
+          
+          {/* UI Filter Tanggal + Tombol Reset Data */}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card p-1 shadow-sm">
+              <div className="flex items-center gap-2 px-2">
+                <CalendarDays className="size-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={draftStartDate}
+                  onChange={(e) => setDraftStartDate(e.target.value)}
+                  className="bg-transparent text-xs outline-none text-foreground cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                  title="Tanggal Mulai"
+                />
+              </div>
+              <span className="text-muted-foreground text-xs font-medium px-1">s/d</span>
+              <div className="flex items-center gap-2 px-2">
+                <input
+                  type="date"
+                  value={draftEndDate}
+                  onChange={(e) => setDraftEndDate(e.target.value)}
+                  className="bg-transparent text-xs outline-none text-foreground cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                  title="Tanggal Selesai"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleApplyFilter}
+                className="ml-1 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <Filter className="size-3.5" />
+                Terapkan
+              </button>
+
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  onClick={handleResetFilter}
+                  title="Reset Filter"
+                  className="mr-1 p-1.5 text-muted-foreground hover:bg-danger-soft hover:text-danger rounded-lg transition-colors"
+                >
+                  <RotateCcw className="size-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* TOMBOL RESET DATA BARU */}
+            <button
+              type="button"
+              onClick={handleResetData}
+              title="Hapus Semua Data"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger hover:text-white"
+            >
+              <Trash2 className="size-3.5" />
+              Reset Data
+            </button>
           </div>
         </section>
 
         <OverviewHighlights />
-
-        <KpiGrid />
+        <KpiGrid startDate={startDate} endDate={endDate} />
 
         <section id="penjualan" className="grid gap-4 lg:grid-cols-12">
-          <RevenueCard />
+          <RevenueCard startDate={startDate} endDate={endDate} />
           <CategoryCard />
         </section>
 
         <section id="stok" className="grid gap-4 lg:grid-cols-12">
           <StockTable />
-          <RecentTransactions />
+          <RecentTransactions startDate={startDate} endDate={endDate} />
         </section>
 
         <section id="pelanggan" className="grid gap-4">

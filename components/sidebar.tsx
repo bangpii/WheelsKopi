@@ -14,6 +14,7 @@ import {
   LifeBuoy,
   ReceiptText,
   ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -40,9 +41,15 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "distribusi",
-    label: "Product Distributor",
+    label: "Menu Distribusi", // <-- Teks diubah di sini
     icon: Boxes,
     href: "/distribusi",
+  },
+  {
+    id: "profit",
+    label: "Analytics & Profit",
+    icon: TrendingUp,
+    href: "/profit",
   },
   {
     id: "master-management",
@@ -50,7 +57,8 @@ const NAV_ITEMS: NavItem[] = [
     icon: Database,
     subItems: [
       { label: "Product Store", href: "/products" },
-      { label: "Others", href: "/others" },
+      { label: "Others", href: "/master-data/others" },
+      { label: "Ban", href: "/master-data/ban" },
       { label: "Stock List", href: "/stock-list" },
       { label: "Supplier", href: "/suppliers" },
       { label: "Store", href: "/stores" },
@@ -102,7 +110,7 @@ interface SidebarProps {
 
 export function Sidebar({ onNavigate }: SidebarProps) {
   const [active, setActive] = useState("overview");
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<string[]>(["master-management"]);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -191,7 +199,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
             const isActive =
               isDashboardActive ||
-              (item.href !== undefined && item.href === pathname);
+              (item.href !== undefined && pathname === item.href);
 
             const isExpanded =
               expanded.includes(item.id) ||

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import type { ChangeEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Box,
   Disc3,
@@ -15,53 +16,70 @@ import {
   TriangleAlert,
   Upload,
   X,
+  Pencil,
+  BarChart3,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RegisterProductModal } from "@/components/distribusi/register-product-modal";
 import { rupiah } from "@/lib/dashboard-data";
-import { useData, type Product } from "@/lib/context/data-context";
+import {
+  useData,
+  toProduct,
+  type Product,
+} from "@/lib/context/data-context";
 import type {
   DistribusiCategory,
   DistribusiFormValues,
 } from "@/lib/distribusi-data";
+// IMPORT DIPERBAIKI: Hapus getStockStatusInfo
+import { formToItem } from "@/lib/distribusi-data";
 
-const statusOptions = ["Semua Status Stok", "Tersedia", "Menipis", "Habis"];
+const statusOptions = ["Semua Status Stok", "Tersedia", "Menipis", "Wajib Pesan"];
 
-function statusOf(stok: number): "Tersedia" | "Menipis" | "Habis" {
-  if (stok <= 0) {
-    return "Habis";
-  }
-
-  if (stok <= 10) {
-    return "Menipis";
-  }
-
+// FUNGSI BARU: Menentukan status stok secara statis
+function statusOf(stok: number) {
+  if (stok < 2) return "Wajib Pesan";
+  if (stok <= 5) return "Menipis";
   return "Tersedia";
 }
 
-function buildProductName(values: DistribusiFormValues): string {
-  const base = `${values.subKategori} ${values.namaBarang}`.trim();
-
-  if (values.kategori === "Ban" || values.subKategori === "Velg") {
-    const size =
-      `${values.ukuran}${values.ring ? ` / ${values.ring}` : ""}`.trim();
-
-    return `${base} ${size}`.trim();
-  }
-
-  return base;
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-export default function DistribusiPage() {
-  const { products, setProducts, stockItems, setStockItems, suppliers } =
-    useData();
+function DistribusiContent() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "others" ? "Others" : "Ban";
 
-  const [category, setCategory] = useState<DistribusiCategory>("Ban");
+  const { products, setProducts, stockItems, setStockItems, suppliers } = useData();
+
+  const [category, setCategory] = useState<DistribusiCategory>(initialTab);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Semua Status Stok");
+  
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Product | null>(null);
+  
   const [notice, setNotice] = useState("");
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "others") setCategory("Others");
+    if (tab === "ban") setCategory("Ban");
+  }, [searchParams]);
+
+  const supplierOptions = suppliers.map((s) => ({ name: s.name }));
 
   const categoryItems = products.filter(
     (item) => item.kategoriUtama === category,
@@ -69,78 +87,99 @@ export default function DistribusiPage() {
 
   const filteredItems = categoryItems.filter((item) => {
     const keyword = search.trim().toLowerCase();
+    
+    const searchTarget = [
+      item.namaBarang,
+      item.subKategori,
+      item.supplier,
+      item.merekBan,
+      item.merekProduk,
+      item.ukuran,
+      item.ukuranTapak,
+      item.ukuranTinggi,
+      item.ring,
+      item.item,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-    const matchSearch =
-      keyword.length === 0 ||
-      item.namaBarang.toLowerCase().includes(keyword) ||
-      item.subKategori.toLowerCase().includes(keyword) ||
-      item.supplier.toLowerCase().includes(keyword);
+    const matchSearch = keyword.length === 0 || searchTarget.includes(keyword);
 
-    const matchStatus =
-      status === "Semua Status Stok" || statusOf(item.stok) === status;
+    // GUNAKAN FUNGSI STATIS
+    const computedStatus = statusOf(item.stok);
+    const matchStatus = status === "Semua Status Stok" || computedStatus === status;
 
     return matchSearch && matchStatus;
   });
 
   const handleRegister = (values: DistribusiFormValues) => {
-    const newItem: Product = {
-      id: `WK-${Date.now().toString().slice(-6)}`,
-      kategoriUtama: values.kategori,
-      namaBarang: buildProductName(values),
-      subKategori: values.subKategori,
-      supplier: values.supplier,
-      ukuran: values.ukuran,
-      ring: values.ring,
-      hargaModalAsli: Number(values.hargaModalAsli),
-      hargaModalToko: Number(values.hargaModalToko),
-      stok: Number(values.stok),
-      gambar: values.gambar,
-      history: [
-        `[${new Date().toLocaleString("id-ID")}] Didaftarkan dari Distribusi`,
-      ],
-    };
+    if (editItem) {
+      const updatedItem = formToItem(editItem.id, values);
+      const updatedProduct = { ...editItem, ...updatedItem };
+      
+      setProducts((prev) =>
+        prev.map((p) => (p.id === editItem.id ? updatedProduct : p))
+      );
+      setNotice(`Produk "${updatedProduct.namaBarang}" berhasil diperbarui.`);
+      setEditItem(null);
+    } else {
+      const newItem = formToItem(`WK-${Date.now().toString().slice(-6)}`, values);
+      const newProduct = toProduct(newItem, "Didaftarkan dari Distribusi");
 
-    setProducts((prev) => [newItem, ...prev]);
+      setProducts((prev) => [newProduct, ...prev]);
+      setNotice(`Produk "${newProduct.namaBarang}" berhasil didaftarkan.`);
+    }
     setCategory(values.kategori);
     setRegisterOpen(false);
-    setNotice(`Produk "${newItem.namaBarang}" berhasil didaftarkan.`);
   };
 
   const handleDelete = (item: Product) => {
-    const confirmed = window.confirm(
-      `Hapus "${item.namaBarang}" dari stock list?`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const confirmed = window.confirm(`Hapus "${item.namaBarang}" dari stock list?`);
+    if (!confirmed) return;
 
     setProducts((prev) => prev.filter((entry) => entry.id !== item.id));
     setStockItems(stockItems.filter((entry) => entry.id !== item.id));
+    setNotice(`Produk "${item.namaBarang}" telah dihapus.`);
+  };
+
+  const openEdit = (item: Product) => {
+    setEditItem(item);
+    setRegisterOpen(true);
   };
 
   const handleExportExcel = () => {
     if (filteredItems.length === 0) {
       setNotice("Tidak ada data untuk diexport.");
-
       return;
     }
 
-    const header =
-      "Kode Barang,Nama Barang,Supplier,Spesifikasi,Harga Modal Asli,Harga Modal Toko,Stok";
+    const header = [
+      "Kode Barang", "Kategori", "Sub Kategori", "Nama Barang", "Supplier",
+      "Spesifikasi", "Merek Ban", "Type Ban", "Item Velg", "GTY (Set)",
+      "Harga Modal Asli", "Harga Tagihan Toko", "Harga Modal Toko",
+      "Modal 1 Set", "Stok", "Status", "Pembayaran", "Tanggal", "Owner",
+      "Payment Date", "Nomor Bon", "Notes",
+    ].join(",");
 
     const rows = filteredItems.map((item) => {
-      const spec = `${item.ukuran}${item.ring ? ` / ${item.ring}` : ""}`;
+      const spec =
+        item.kategoriUtama === "Ban"
+          ? `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""}${item.ring ? ` ${item.ring}` : ""}`.trim()
+          : `${item.ukuran}${item.ring ? ` ${item.ring}` : ""}`.trim();
+
+      const currentStatus = statusOf(item.stok);
 
       return [
-        item.id,
-        item.namaBarang,
-        item.supplier,
-        spec,
-        item.hargaModalAsli,
-        item.hargaModalToko,
-        item.stok,
-      ].join(",");
+        item.id, item.kategoriUtama, item.subKategori, item.namaBarang,
+        item.supplier, spec, item.merekBan ?? "", item.typeBan ?? "",
+        item.item ?? "", item.gtySet ?? "", item.hargaModalAsli,
+        item.hargaTagihanToko ?? "", item.hargaModalToko, item.modal1Set ?? "",
+        item.stok, currentStatus, item.pembayaran ?? "", item.tanggal ?? "", item.owner ?? "",
+        item.paymentDate ?? "", item.nomorBon ?? "", item.notes ?? "",
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(",");
     });
 
     const csv = `\uFEFF${[header, ...rows].join("\n")}`;
@@ -160,36 +199,41 @@ export default function DistribusiPage() {
   const handleExportDocument = () => {
     if (filteredItems.length === 0) {
       setNotice("Tidak ada data untuk diexport.");
-
       return;
     }
 
     const printWindow = window.open("", "_blank");
-
     if (!printWindow) {
       setNotice("Popup diblokir browser. Izinkan popup untuk mencetak.");
-
       return;
     }
 
+    const isBan = category === "Ban";
+
     const rows = filteredItems
-      .map(
-        (item) => `
+      .map((item) => {
+        const spec = isBan
+          ? `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""}${item.ring ? ` ${item.ring}` : ""}`.trim()
+          : `${item.ukuran}${item.ring ? ` ${item.ring}` : ""}`.trim();
+
+        return `
           <tr>
-            <td>${item.id}</td>
-            <td>${item.namaBarang}</td>
-            <td>${item.supplier}</td>
-            <td>${item.ukuran}${item.ring ? ` / ${item.ring}` : ""}</td>
-            <td>Rp ${item.hargaModalToko.toLocaleString("id-ID")}</td>
+            <td>${escapeHtml(item.id)}</td>
+            <td>${escapeHtml(item.namaBarang)}</td>
+            <td>${escapeHtml(item.supplier || "-")}</td>
+            <td>${escapeHtml(spec || "-")}</td>
+            <td>${item.hargaModalAsli.toLocaleString("id-ID")}</td>
+            <td>${item.hargaTagihanToko?.toLocaleString("id-ID") ?? "-"}</td>
+            <td>${item.hargaModalToko.toLocaleString("id-ID")}</td>
             <td>${item.stok}</td>
-          </tr>`,
-      )
+          </tr>`;
+      })
       .join("");
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Stock List - ${category}</title>
+          <title>Stock List - ${escapeHtml(category)}</title>
           <style>
             body { font-family: sans-serif; padding: 24px; color: #18141b; }
             h1 { font-size: 20px; margin-bottom: 4px; }
@@ -200,7 +244,7 @@ export default function DistribusiPage() {
           </style>
         </head>
         <body>
-          <h1>Stock List - Kategori ${category}</h1>
+          <h1>Stock List - Kategori ${escapeHtml(category)}</h1>
           <p>Dicetak ${new Date().toLocaleString("id-ID")}</p>
           <table>
             <thead>
@@ -209,7 +253,9 @@ export default function DistribusiPage() {
                 <th>Nama Barang</th>
                 <th>Supplier</th>
                 <th>Spesifikasi</th>
-                <th>Harga Modal</th>
+                <th>Modal Asli</th>
+                <th>Tagihan Toko</th>
+                <th>Modal Toko</th>
                 <th>Stok</th>
               </tr>
             </thead>
@@ -220,76 +266,52 @@ export default function DistribusiPage() {
     `);
     printWindow.document.close();
     printWindow.focus();
-
     window.setTimeout(() => printWindow.print(), 400);
   };
 
   const handleImportFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
     event.target.value = "";
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     const isCsv = file.name.toLowerCase().endsWith(".csv");
-
     if (!isCsv) {
-      setNotice(
-        "File .xlsx belum diproses di demo frontend ini. Gunakan file .csv.",
-      );
-
+      setNotice("File .xlsx belum diproses di demo frontend ini. Gunakan file .csv.");
       return;
     }
 
     const reader = new FileReader();
-
     reader.onload = () => {
       const text = String(reader.result ?? "");
       const lines = text.split(/\r?\n/);
       const filledLines = lines.filter((line) => line.trim().length > 0);
       const dataLines = filledLines.slice(1);
 
-      const imported = dataLines.map((line, index) => {
+      const imported: Product[] = dataLines.map((line, index) => {
         const [
-          namaBarang = "",
-          supplier = "",
-          ukuran = "",
-          ring = "",
-          asli = "0",
-          toko = "0",
-          stok = "0",
+          namaBarang = "", supplier = "", ukuran = "", ring = "",
+          asli = "0", toko = "0", stok = "0",
         ] = line.split(",");
 
-        return {
-          id: `IMP-${Date.now().toString().slice(-5)}-${index + 1}`,
-          kategoriUtama: category,
-          namaBarang,
+        const item = formToItem(`IMP-${Date.now().toString().slice(-5)}-${index + 1}`, {
+          kategori: category,
           subKategori: category === "Ban" ? "Import" : "Others",
-          supplier,
-          ukuran,
-          ring,
-          hargaModalAsli: Number(asli) || 0,
-          hargaModalToko: Number(toko) || 0,
-          stok: Number(stok) || 0,
-          gambar: "",
-          history: [
-            `[${new Date().toLocaleString("id-ID")}] Diimport dari ${file.name}`,
-          ],
-        } satisfies Product;
+          namaBarang, ukuran, ring,
+          hargaModalAsli: asli, hargaModalToko: toko, stok,
+          gambar: "", supplier,
+        });
+
+        return toProduct(item, `Diimport dari ${file.name}`);
       });
 
       if (imported.length === 0) {
         setNotice("Tidak ada baris data yang bisa diimport.");
-
         return;
       }
 
       setProducts((prev) => [...imported, ...prev]);
-      setNotice(
-        `${imported.length} produk berhasil diimport dari ${file.name}.`,
-      );
+      setNotice(`${imported.length} produk berhasil diimport dari ${file.name}.`);
     };
 
     reader.readAsText(file);
@@ -311,13 +333,19 @@ export default function DistribusiPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <Package className="size-3.5 text-primary" />
-              {categoryItems.length} SKU {category}
-            </span>
+            <Link
+              href="/profit"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+            >
+              <BarChart3 className="size-4 text-primary" />
+              Lihat Profit
+            </Link>
             <button
               type="button"
-              onClick={() => setRegisterOpen(true)}
+              onClick={() => {
+                setEditItem(null);
+                setRegisterOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
             >
               <Plus className="size-4" />
@@ -338,10 +366,7 @@ export default function DistribusiPage() {
           </span>
         </div>
 
-        <section
-          className="surface overflow-hidden"
-          aria-label="Stock list distribusi"
-        >
+        <section className="surface overflow-hidden" aria-label="Stock list distribusi">
           <div className="flex flex-col gap-3 border-b border-border px-4 pt-1 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center">
               <span className="flex items-center gap-2 border-b-2 border-primary px-4 py-3.5 text-sm font-semibold text-primary sm:px-5">
@@ -350,7 +375,10 @@ export default function DistribusiPage() {
               </span>
               <button
                 type="button"
-                onClick={() => setRegisterOpen(true)}
+                onClick={() => {
+                  setEditItem(null);
+                  setRegisterOpen(true);
+                }}
                 className="flex items-center gap-2 border-b-2 border-transparent px-4 py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-5"
               >
                 <Plus className="size-4" />
@@ -361,7 +389,6 @@ export default function DistribusiPage() {
             <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 p-1">
               {(["Ban", "Others"] as const).map((tab) => {
                 const TabIcon = tab === "Ban" ? Disc3 : Box;
-
                 return (
                   <button
                     key={tab}
@@ -388,7 +415,7 @@ export default function DistribusiPage() {
                 type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari nama, merek, atau supplier..."
+                placeholder="Cari nama, merek, ukuran, supplier..."
                 className="w-full rounded-xl border border-border bg-background/70 py-2.5 pr-3 pl-9 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50 focus:ring-2 focus:ring-ring/30"
               />
             </div>
@@ -409,7 +436,7 @@ export default function DistribusiPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx"
+                accept=".csv"
                 className="hidden"
                 onChange={handleImportFile}
               />
@@ -419,7 +446,7 @@ export default function DistribusiPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3.5 py-2.5 text-xs font-semibold transition-colors hover:bg-muted"
               >
                 <Upload className="size-4" />
-                Import Excel
+                Import CSV
               </button>
               <button
                 type="button"
@@ -455,27 +482,29 @@ export default function DistribusiPage() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1020px] text-left text-sm">
+            <table className="w-full min-w-250 text-left text-sm">
               <thead className="border-b border-border bg-muted/50 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
                 <tr>
                   <th className="px-4 py-3.5 font-semibold sm:px-6">Kode</th>
                   <th className="px-4 py-3.5 font-semibold">Nama Barang</th>
                   <th className="px-4 py-3.5 font-semibold">Supplier</th>
                   <th className="px-4 py-3.5 font-semibold">Spesifikasi</th>
-                  <th className="px-4 py-3.5 text-right font-semibold">
-                    Harga Modal
-                  </th>
+                  <th className="px-4 py-3.5 font-semibold">Harga (Modal / Toko)</th>
                   <th className="px-4 py-3.5 text-right font-semibold">Stok</th>
-                  <th className="px-4 py-3.5 text-center font-semibold">
-                    Status
-                  </th>
-                  <th className="px-4 py-3.5 text-center font-semibold sm:px-6">
-                    Action
-                  </th>
+                  <th className="px-4 py-3.5 text-center font-semibold">Status</th>
+                  <th className="px-4 py-3.5 text-center font-semibold sm:px-6">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {filteredItems.length === 0 ? (
+                {!mounted ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={8} className="px-6 py-3">
+                        <div className="h-10 animate-pulse rounded-lg bg-muted/60" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-16">
                       <div className="flex flex-col items-center justify-center gap-3 text-center">
@@ -483,17 +512,17 @@ export default function DistribusiPage() {
                           <Box className="size-6" />
                         </span>
                         <div>
-                          <p className="text-sm font-semibold">
-                            Belum ada barang terdaftar
-                          </p>
+                          <p className="text-sm font-semibold">Belum ada barang terdaftar</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            Tambahkan produk baru lewat form register, atau
-                            import dari file CSV.
+                            Tambahkan produk baru lewat form register, atau import dari file CSV.
                           </p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setRegisterOpen(true)}
+                          onClick={() => {
+                            setEditItem(null);
+                            setRegisterOpen(true);
+                          }}
                           className="mt-1 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
                         >
                           <Plus className="size-3.5" />
@@ -504,20 +533,23 @@ export default function DistribusiPage() {
                   </tr>
                 ) : (
                   filteredItems.map((item) => {
+                    // GUNAKAN FUNGSI STATIS
                     const stockStatus = statusOf(item.stok);
 
                     const statusClass =
-                      stockStatus === "Habis"
+                      stockStatus === "Wajib Pesan"
                         ? "bg-danger-soft text-danger"
                         : stockStatus === "Menipis"
                           ? "bg-warning-soft text-warning"
                           : "bg-success-soft text-success";
 
+                    const spec =
+                      item.kategoriUtama === "Ban"
+                        ? `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""} ${item.ring ? ` ${item.ring}` : ""}`.trim()
+                        : `${item.ukuran ?? ""} ${item.ring ? ` ${item.ring}` : ""}`.trim();
+
                     return (
-                      <tr
-                        key={item.id}
-                        className="group transition-colors hover:bg-muted/40"
-                      >
+                      <tr key={item.id} className="group transition-colors hover:bg-muted/40">
                         <td className="px-4 py-3.5 font-mono text-xs font-medium text-muted-foreground sm:px-6">
                           {item.id}
                         </td>
@@ -527,11 +559,10 @@ export default function DistribusiPage() {
                               {item.subKategori.slice(0, 3).toUpperCase()}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-medium">
-                                {item.namaBarang}
-                              </p>
+                              <p className="truncate font-medium">{item.namaBarang}</p>
                               <p className="truncate text-[11px] text-muted-foreground">
                                 {item.subKategori}
+                                {item.merekBan ? ` • ${item.merekBan} ${item.typeBan ?? ""}` : ""}
                               </p>
                             </div>
                           </div>
@@ -540,37 +571,41 @@ export default function DistribusiPage() {
                           {item.supplier || "-"}
                         </td>
                         <td className="px-4 py-3.5 text-muted-foreground">
-                          {item.ukuran}
-                          {item.ring ? ` / ${item.ring}` : ""}
+                          {spec || "-"}
                         </td>
-                        <td className="px-4 py-3.5 text-right">
-                          <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                            Asli {rupiah.format(item.hargaModalAsli)}
-                          </p>
-                          <p className="font-mono text-sm font-semibold text-primary tabular-nums">
-                            Toko {rupiah.format(item.hargaModalToko)}
-                          </p>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <p className="font-mono text-xs text-muted-foreground tabular-nums">
+                              M: {rupiah.format(item.hargaModalAsli)}
+                            </p>
+                            <span className="text-muted-foreground/30">|</span>
+                            <p className="font-mono text-sm font-semibold text-primary tabular-nums">
+                              T: {rupiah.format(item.hargaModalToko)}
+                            </p>
+                          </div>
                         </td>
                         <td className="px-4 py-3.5 text-right font-mono font-semibold tabular-nums">
                           {item.stok}
                         </td>
                         <td className="px-4 py-3.5 text-center">
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}
-                          >
-                            {stockStatus === "Habis" && (
-                              <TriangleAlert className="size-3.5" />
-                            )}
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
+                            {stockStatus === "Wajib Pesan" && <TriangleAlert className="size-3.5" />}
                             {stockStatus}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 sm:px-6">
-                          <div className="flex justify-center">
+                          <div className="flex justify-center gap-1">
                             <button
-                              type="button"
+                              onClick={() => openEdit(item)}
+                              className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
+                              title="Edit Produk"
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                            <button
                               onClick={() => handleDelete(item)}
-                              aria-label={`Hapus ${item.namaBarang}`}
-                              className="rounded-xl border border-transparent p-2 text-muted-foreground transition-colors hover:border-danger/20 hover:bg-danger-soft hover:text-danger"
+                              className="rounded-xl p-2 text-muted-foreground transition-colors hover:border-danger/20 hover:bg-danger-soft hover:text-danger"
+                              title="Hapus Produk"
                             >
                               <Trash2 className="size-4" />
                             </button>
@@ -586,8 +621,9 @@ export default function DistribusiPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground sm:px-6">
             <span>
-              Menampilkan {filteredItems.length} dari {categoryItems.length}{" "}
-              produk {category}
+              {mounted
+                ? `Menampilkan ${filteredItems.length} dari ${categoryItems.length} produk ${category}`
+                : "Memuat data…"}
             </span>
             <span className="font-mono tracking-wide uppercase">
               Data demo • frontend only
@@ -598,11 +634,23 @@ export default function DistribusiPage() {
 
       {registerOpen && (
         <RegisterProductModal
-          suppliers={suppliers}
-          onClose={() => setRegisterOpen(false)}
+          suppliers={supplierOptions}
+          initialData={editItem}
+          onClose={() => {
+            setRegisterOpen(false);
+            setEditItem(null);
+          }}
           onSubmit={handleRegister}
         />
       )}
     </AppShell>
+  );
+}
+
+export default function DistribusiPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Memuat data...</div>}>
+      <DistribusiContent />
+    </Suspense>
   );
 }

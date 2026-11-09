@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useData } from "@/lib/context/data-context";
 
 interface CategoryCardProps {
@@ -11,7 +12,7 @@ export function CategoryCard({ startDate, endDate }: CategoryCardProps) {
   const { products, transactions } = useData();
 
   // Filter transaksi
-  const filteredTransactions = transactions.filter((trx: any) => {
+  const filteredTransactions = transactions.filter((trx) => {
     if (!startDate && !endDate) return true;
     const trxDateStr = trx.tanggal || trx.date || trx.createdAt;
     if (!trxDateStr) return false;
@@ -26,24 +27,16 @@ export function CategoryCard({ startDate, endDate }: CategoryCardProps) {
   let totalVelg = 0;
   let totalAksesoris = 0;
 
-  filteredTransactions.forEach((trx: any) => {
-    if (trx.items && Array.isArray(trx.items)) {
-      trx.items.forEach((item: any) => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-           if (product.kategoriUtama === "Ban") totalBan += (item.qty || 1);
-           else if (product.subKategori === "Velg") totalVelg += (item.qty || 1);
-           else totalAksesoris += (item.qty || 1);
-        }
-      });
-    } else if (trx.productId) {
-      const product = products.find(p => p.id === trx.productId);
-      if (product) {
-         if (product.kategoriUtama === "Ban") totalBan += (trx.qty || 1);
-         else if (product.subKategori === "Velg") totalVelg += (trx.qty || 1);
-         else totalAksesoris += (trx.qty || 1);
-      }
-    }
+  filteredTransactions.forEach((trx) => {
+    trx.lines?.forEach((line) => {
+      const product = products.find((item) => item.id === line.productId);
+      if (!product) return;
+
+      const qty = line.qty || 1;
+      if (product.kategoriUtama === "Ban") totalBan += qty;
+      else if (product.subKategori === "Velg") totalVelg += qty;
+      else totalAksesoris += qty;
+    });
   });
 
   const totalUnit = totalBan + totalVelg + totalAksesoris;
@@ -82,18 +75,27 @@ export function CategoryCard({ startDate, endDate }: CategoryCardProps) {
       </div>
 
       <div className="mt-8 space-y-3 text-sm">
-        <div className="flex justify-between items-center">
+        <Link
+          href="/distribusi?tab=ban"
+          className="flex justify-between items-center rounded-lg px-1 py-1 transition-colors hover:bg-muted/60"
+        >
           <span className="flex items-center gap-2"><div className="size-2 bg-red-500 rounded-full" /> Ban</span>
           <span className="font-semibold">{percentBan}%</span>
-        </div>
-        <div className="flex justify-between items-center">
+        </Link>
+        <Link
+          href="/distribusi?tab=others"
+          className="flex justify-between items-center rounded-lg px-1 py-1 transition-colors hover:bg-muted/60"
+        >
           <span className="flex items-center gap-2"><div className="size-2 bg-red-400 rounded-full" /> Velg</span>
           <span className="font-semibold">{percentVelg}%</span>
-        </div>
-        <div className="flex justify-between items-center">
+        </Link>
+        <Link
+          href="/distribusi?tab=others"
+          className="flex justify-between items-center rounded-lg px-1 py-1 transition-colors hover:bg-muted/60"
+        >
           <span className="flex items-center gap-2"><div className="size-2 bg-red-300 rounded-full" /> Aksesoris</span>
           <span className="font-semibold">{percentAksesoris}%</span>
-        </div>
+        </Link>
       </div>
     </div>
   );

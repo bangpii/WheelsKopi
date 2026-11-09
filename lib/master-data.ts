@@ -75,6 +75,9 @@ export interface UserRecord {
   store: string;
   fotoKtp: string;
   status: "Aktif" | "Nonaktif";
+  gajiPokok: number;
+  periodeGaji: "Mingguan" | "Bulanan";
+  hariGajian: string;
 }
 
 export interface RolePermission {
@@ -436,6 +439,9 @@ export const users: UserRecord[] = [
     phone: "0812-6000-0001",
     fotoKtp: "",
     status: "Aktif",
+    gajiPokok: 6_500_000,
+    periodeGaji: "Bulanan",
+    hariGajian: "25",
   },
   {
     id: "USR-002",
@@ -448,6 +454,9 @@ export const users: UserRecord[] = [
     phone: "0812-6000-0002",
     fotoKtp: "",
     status: "Aktif",
+    gajiPokok: 4_200_000,
+    periodeGaji: "Bulanan",
+    hariGajian: "25",
   },
   {
     id: "USR-003",
@@ -460,6 +469,9 @@ export const users: UserRecord[] = [
     phone: "0812-6000-0003",
     fotoKtp: "",
     status: "Aktif",
+    gajiPokok: 1_000_000,
+    periodeGaji: "Mingguan",
+    hariGajian: "Jumat",
   },
   {
     id: "USR-004",
@@ -472,6 +484,9 @@ export const users: UserRecord[] = [
     phone: "0812-6000-0004",
     fotoKtp: "",
     status: "Aktif",
+    gajiPokok: 5_500_000,
+    periodeGaji: "Bulanan",
+    hariGajian: "25",
   },
 ];
 

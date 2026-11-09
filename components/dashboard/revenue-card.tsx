@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
@@ -37,17 +38,19 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
   const { transactions } = useData();
   const [mounted, setMounted] = useState(false);
   
-  // Pindahkan inisialisasi tahun ke dalam state
-  const [currentYear, setCurrentYear] = useState<number>(2026); // Default statis untuk SSR
+  // Default statis untuk SSR, lalu disesuaikan di browser
+  const [currentYear, setCurrentYear] = useState<number>(2026);
+  const [currentMonth, setCurrentMonth] = useState<number>(0);
 
   useEffect(() => {
     setMounted(true);
-    // Set tahun asli saat sudah berjalan di browser
-    setCurrentYear(new Date().getFullYear());
+    const now = new Date();
+    setCurrentYear(now.getFullYear());
+    setCurrentMonth(now.getMonth());
   }, []);
 
   // 1. FILTER TRANSAKSI
-  const filteredTransactions = transactions.filter((trx: any) => {
+  const filteredTransactions = transactions.filter((trx) => {
     if (!startDate && !endDate) return true;
     const trxDateStr = trx.tanggal || trx.date || trx.createdAt;
     if (!trxDateStr) return false;
@@ -57,23 +60,34 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
     return true;
   });
 
-  // 2. HITUNG PENDAPATAN PER BULAN
-  const monthlyData = MONTHS.map((monthName, index) => {
-    const monthTransactions = filteredTransactions.filter((t: any) => {
-      const dateStr = t.tanggal || t.date || t.createdAt;
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      return d.getMonth() === index && d.getFullYear() === currentYear;
-    });
-    
-    const total = monthTransactions.reduce((acc: number, curr: any) => acc + (curr.total || 0), 0);
-    return { month: monthName, value: total };
+  // 2. TENTUKAN PERIODE (mengikuti filter tanggal bila ada)
+  const filterStart = startDate ? new Date(startDate) : null;
+  const periodYear = filterStart ? filterStart.getFullYear() : currentYear;
+  const periodMonth = filterStart ? filterStart.getMonth() : currentMonth;
+  const periodLabel = `${MONTHS[periodMonth]} ${periodYear}`;
+
+  // 3. HITUNG PENDAPATAN HARIAN TANGGAL 1-5
+  const dailyData = [1, 2, 3, 4, 5].map((day) => {
+    const total = filteredTransactions.reduce((acc, trx) => {
+      const dateStr = trx.tanggal || trx.date || trx.createdAt;
+      if (!dateStr) return acc;
+
+      const date = new Date(dateStr);
+      const isSamePeriod =
+        date.getFullYear() === periodYear &&
+        date.getMonth() === periodMonth &&
+        date.getDate() === day;
+
+      return isSamePeriod ? acc + (trx.total || 0) : acc;
+    }, 0);
+
+    return { day: String(day).padStart(2, "0"), value: total };
   });
 
-  const dynamicRevenue = filteredTransactions.reduce((acc: number, curr: any) => acc + (curr.total || 0), 0);
+  const dynamicRevenue = dailyData.reduce((acc, point) => acc + point.value, 0);
 
-  // 3. LOGIKA GRAFIK
-  const values = monthlyData.map((point) => point.value);
+  // 4. LOGIKA GRAFIK
+  const values = dailyData.map((point) => point.value);
   const maxVal = Math.max(...values, 100000);
   const minimum = 0;
   const maximum = maxVal * 1.1;
@@ -98,13 +112,21 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
         <div>
           <h2 className="font-display text-base font-semibold tracking-tight">Performa Penjualan</h2>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            {startDate || endDate ? "Data pendapatan berdasarkan filter tanggal" : "Pendapatan 12 bulan terakhir"}
+            {mounted
+              ? `Pendapatan harian tanggal 1–5 · ${periodLabel}`
+              : "Pendapatan harian tanggal 1–5"}
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/60 p-1 text-xs font-medium">
-          <span className="rounded-lg bg-card px-3 py-1.5 text-foreground shadow-sm">12 Bulan</span>
-          <span className="px-3 py-1.5 text-muted-foreground">30 Hari</span>
-          <span className="px-3 py-1.5 text-muted-foreground">7 Hari</span>
+          <span className="rounded-lg bg-card px-3 py-1.5 text-foreground shadow-sm">
+            Tanggal 1–5
+          </span>
+          <Link
+            href="/profit"
+            className="rounded-lg px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Detail Profit
+          </Link>
         </div>
       </div>
 
@@ -148,9 +170,9 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
           <circle cx={last[0]} cy={last[1]} r="4" fill="var(--chart-2)" stroke="var(--card)" strokeWidth="2" />
         </svg>
 
-        <div className="mt-3 grid grid-cols-12 gap-1 px-0.5 text-center text-[10px] font-medium text-muted-foreground sm:text-[11px]">
-          {monthlyData.map((point) => (
-            <span key={point.month}>{point.month}</span>
+        <div className="mt-3 grid grid-cols-5 gap-1 px-0.5 text-center text-[10px] font-medium text-muted-foreground sm:text-[11px]">
+          {dailyData.map((point) => (
+            <span key={point.day}>{point.day}</span>
           ))}
         </div>
       </div>

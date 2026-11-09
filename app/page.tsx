@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Filter, RotateCcw, Trash2 } from "lucide-react"; // Tambahkan Trash2
+import { CalendarDays, RotateCcw, Trash2 } from "lucide-react"; // Tambahkan Trash2
 import { AppShell } from "@/components/app-shell";
 import { CategoryCard } from "@/components/dashboard/category-card";
 import { InsightGrid } from "@/components/dashboard/insight-grid";
@@ -12,20 +12,11 @@ import { RevenueCard } from "@/components/dashboard/revenue-card";
 import { StockTable } from "@/components/dashboard/stock-table";
 
 export default function DashboardPage() {
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEndDate, setDraftEndDate] = useState("");
-
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const handleApplyFilter = () => {
-    setStartDate(draftStartDate);
-    setEndDate(draftEndDate);
-  };
-
+  // Filter realtime: tanggal yang dipilih langsung dipakai semua konten.
   const handleResetFilter = () => {
-    setDraftStartDate("");
-    setDraftEndDate("");
     setStartDate("");
     setEndDate("");
   };
@@ -76,9 +67,9 @@ export default function DashboardPage() {
                 <CalendarDays className="size-4 text-muted-foreground" />
                 <input
                   type="date"
-                  value={draftStartDate}
-                  onChange={(e) => setDraftStartDate(e.target.value)}
-                  className="bg-transparent text-xs outline-none text-foreground cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-7 bg-transparent px-0.5 text-xs outline-none text-foreground cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
                   title="Tanggal Mulai"
                 />
               </div>
@@ -86,21 +77,12 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 px-2">
                 <input
                   type="date"
-                  value={draftEndDate}
-                  onChange={(e) => setDraftEndDate(e.target.value)}
-                  className="bg-transparent text-xs outline-none text-foreground cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-7 bg-transparent px-0.5 text-xs outline-none text-foreground cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
                   title="Tanggal Selesai"
                 />
               </div>
-
-              <button
-                type="button"
-                onClick={handleApplyFilter}
-                className="ml-1 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                <Filter className="size-3.5" />
-                Terapkan
-              </button>
 
               {(startDate || endDate) && (
                 <button
@@ -127,21 +109,21 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <OverviewHighlights />
+        <OverviewHighlights startDate={startDate} endDate={endDate} />
         <KpiGrid startDate={startDate} endDate={endDate} />
 
         <section id="penjualan" className="grid gap-4 lg:grid-cols-12">
           <RevenueCard startDate={startDate} endDate={endDate} />
-          <CategoryCard />
+          <CategoryCard startDate={startDate} endDate={endDate} />
         </section>
 
         <section id="stok" className="grid gap-4 lg:grid-cols-12">
-          <StockTable />
+          <StockTable startDate={startDate} endDate={endDate} />
           <RecentTransactions startDate={startDate} endDate={endDate} />
         </section>
 
         <section id="pelanggan" className="grid gap-4">
-          <InsightGrid />
+          <InsightGrid startDate={startDate} endDate={endDate} />
         </section>
 
         <section id="supplier" className="grid gap-4">

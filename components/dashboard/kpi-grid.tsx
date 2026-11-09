@@ -38,7 +38,7 @@ export function KpiGrid({ startDate, endDate }: KpiGridProps) {
   }, []);
 
   // 1. FILTER TRANSAKSI BERDASARKAN TANGGAL
-  const filteredTransactions = transactions.filter((trx: any) => {
+  const filteredTransactions = transactions.filter((trx) => {
     if (!startDate && !endDate) return true;
     
     const trxDateStr = trx.tanggal || trx.date || trx.createdAt;
@@ -60,13 +60,16 @@ export function KpiGrid({ startDate, endDate }: KpiGridProps) {
   });
 
   // 2. HITUNG DATA DINAMIS
-  const totalRevenue = filteredTransactions.reduce((acc: number, curr: any) => acc + (curr.total || 0), 0);
-  const totalSales = filteredTransactions.length;
+  const totalRevenue = filteredTransactions.reduce((acc, curr) => acc + (curr.total || 0), 0);
+  const totalUnits = filteredTransactions.reduce(
+    (acc, curr) =>
+      acc +
+      (curr.lines
+        ? curr.lines.reduce((lineSum, line) => lineSum + line.qty, 0)
+        : curr.items || 0),
+    0,
+  );
   const criticalStock = products.filter((p) => p.stok < 2).length;
-
-  // Hitung total customer unik
-  const uniqueCustomers = new Set(filteredTransactions.map((t: any) => t.customer || t.customerName || "Pelanggan Umum"));
-  const totalCustomers = uniqueCustomers.size;
 
   // 3. SUSUN DATA KPI
   const dynamicKpis = [
@@ -81,10 +84,10 @@ export function KpiGrid({ startDate, endDate }: KpiGridProps) {
     },
     {
       label: "Unit Terjual",
-      value: totalSales.toString(),
+      value: totalUnits.toString(),
       change: "+8.2%",
       trend: "up" as const,
-      hint: "nota transaksi",
+      hint: "unit dari transaksi",
       spark: [5, 8, 12, 10, 15, 20, 18],
       href: "/profit",
     },
@@ -104,7 +107,7 @@ export function KpiGrid({ startDate, endDate }: KpiGridProps) {
       trend: "down" as const,
       hint: "SKU di bawah batas",
       spark: [10, 8, 9, 5, 4, 3, 3],
-      href: "/profit",
+      href: "/stock-list",
     },
   ];
 

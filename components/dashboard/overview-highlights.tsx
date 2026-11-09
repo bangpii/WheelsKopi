@@ -1,16 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight, Megaphone, Package, Users } from "lucide-react";
-import { stockListRecords } from "@/lib/operations-data";
-import { customers, news } from "@/lib/warehouse-data";
+import { useData } from "@/lib/context/data-context";
+import {
+  countUniqueCustomers,
+  filterTransactions,
+} from "@/lib/dashboard-filter";
+import { news } from "@/lib/warehouse-data";
 
-export function OverviewHighlights() {
+interface OverviewHighlightsProps {
+  startDate?: string;
+  endDate?: string;
+}
+
+export function OverviewHighlights({
+  startDate,
+  endDate,
+}: OverviewHighlightsProps) {
+  const { products, transactions } = useData();
+  const filteredTransactions = filterTransactions(
+    transactions,
+    startDate,
+    endDate,
+  );
+  const filtered = Boolean(startDate || endDate);
+  const totalCustomers = countUniqueCustomers(
+    filtered ? filteredTransactions : transactions,
+  );
+
   return (
     <section
       className="grid gap-4 lg:grid-cols-12"
       aria-label="Ringkasan overview"
     >
       <Link
-        href="/products"
+        href="/distribusi"
         className="surface group flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5 lg:col-span-3"
       >
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -21,10 +46,10 @@ export function OverviewHighlights() {
             Total Produk
           </p>
           <p className="font-display mt-1 text-2xl font-semibold tabular-nums">
-            {stockListRecords.length}
+            {products.length}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            produk aktif di toko
+            produk aktif di distributor
           </p>
         </div>
         <ArrowUpRight className="ml-auto size-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -42,10 +67,10 @@ export function OverviewHighlights() {
             Total Customer
           </p>
           <p className="font-display mt-1 text-2xl font-semibold tabular-nums">
-            {customers.length}
+            {totalCustomers}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            pernah purchase
+            {filtered ? "purchase pada periode ini" : "pernah purchase"}
           </p>
         </div>
         <ArrowUpRight className="ml-auto size-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />

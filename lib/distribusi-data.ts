@@ -1,5 +1,4 @@
 // lib/distribusi-data.ts
-import { BAN_RING_OPTIONS } from "./ban-reference-data";
 
 /* ------------------------------------------------------------------ */
 /*  Tipe Data                                                         */
@@ -40,6 +39,7 @@ export interface DistribusiItem {
   paymentDate?: string;
   nomorBon?: string;
   notes?: string;
+  keterangan?: string;
 
   // Ban
   merekBan?: string;
@@ -56,6 +56,7 @@ export interface DistribusiItem {
   hole?: string;
   et?: string;
   colour?: string;
+  nobes?: string;
   item?: string;
   gtySet?: number;
   standarPrice?: number;
@@ -81,40 +82,42 @@ export interface DistribusiItem {
 /** Nilai form input (semuanya berupa string) */
 export interface DistribusiFormValues {
   kategori: DistribusiCategory;
-  subKategori: string;
-  namaBarang: string;
-  ukuran: string;
-  ring: string;
-  hargaModalAsli: string;
-  hargaModalToko: string;
+  supplier: string;
   stok: string;
   gambar: string;
-  supplier: string;
 
-  // Shared / meta
+  // Ban
+  merekBan?: string;
+  typeBan?: string;
+  ring?: string;
+  ukuranTapak?: string;
+  ukuranTinggi?: string;
+
+  // Others
+  subKategori?: string;
+  merekProduk?: string;
+  typeVelg?: string;
+  wide?: string;
+  hole?: string;
+  et?: string;
+  colour?: string;
+  nobes?: string;
+  keterangan?: string;
+  notes?: string;
+
+  // Legacy opsional — tidak ditampilkan lagi di form registrasi.
+  namaBarang?: string;
+  ukuran?: string;
+  hargaModalAsli?: string;
+  hargaModalToko?: string;
+  hargaTagihanToko?: string;
   tanggal?: string;
   pembayaran?: DistribusiPayment;
   jenisBarang?: string;
   owner?: string;
   paymentDate?: string;
   nomorBon?: string;
-  notes?: string;
-
-  // Ban
-  merekBan?: string;
-  typeBan?: string;
-  ukuranTapak?: string;
-  ukuranTinggi?: string;
-  hargaTagihanToko?: string;
-
-  // Velg / Others
-  merekProduk?: string;
   kodeBarang?: string;
-  typeVelg?: string;
-  wide?: string;
-  hole?: string;
-  et?: string;
-  colour?: string;
   item?: string;
   gtySet?: string;
   standarPrice?: string;
@@ -123,7 +126,6 @@ export interface DistribusiFormValues {
   dprice?: string;
   discountType?: string;
   rawPrice?: string;
-  sswDisc?: string;
   sswDisc2?: string;
   rawPriceAfterDisc?: string;
   shippingFee?: string;
@@ -232,31 +234,51 @@ export function formToItem(
   v: DistribusiFormValues,
 ): DistribusiItem {
   const isBan = v.kategori === "Ban";
+  const today = new Date().toISOString().slice(0, 10);
+  const isVelg = !isBan && v.subKategori === "Velg";
+  const itemCode = isVelg
+    ? buildVelgItemCode({ ...v, tanggal: v.tanggal || today })
+    : undefined;
 
-  const namaBarang = isBan ? buildBanName(v) : buildOthersName(v);
+  const namaBarang = isBan
+    ? buildBanName(v)
+    : isVelg && itemCode
+      ? itemCode
+      : v.namaBarang?.trim() ||
+        [v.merekProduk?.trim(), v.subKategori?.trim()]
+          .filter(Boolean)
+          .join(" ") ||
+        v.subKategori ||
+        "Others";
+
+  const ukuran = isBan
+    ? [v.ukuranTapak, v.ukuranTinggi].filter(Boolean).join("/")
+    : isVelg
+      ? [v.ring, v.wide].filter(Boolean).join(" ")
+      : v.keterangan || "";
 
   return {
     id,
     kategori: v.kategori,
     namaBarang,
-    subKategori: isBan ? v.subKategori || v.merekBan || "Ban" : v.subKategori,
+    subKategori: isBan ? v.merekBan || "Ban" : v.subKategori || "Others",
     supplier: v.supplier,
-    ukuran: isBan
-      ? `${v.ukuranTapak ?? ""}${v.ukuranTinggi ? `/${v.ukuranTinggi}` : ""}`.replace(/^\/|\/$/g, "")
-      : v.ukuran,
-    ring: v.ring,
+    ukuran,
+    ring: v.ring || "",
     hargaModalAsli: Number(v.hargaModalAsli) || 0,
     hargaModalToko: Number(v.hargaModalToko) || 0,
+    standarPrice: Number(v.standarPrice) || 0,
     stok: Number(v.stok) || 0,
     gambar: v.gambar,
-
-    tanggal: v.tanggal,
-    pembayaran: v.pembayaran,
-    jenisBarang: v.jenisBarang,
-    owner: v.owner,
-    paymentDate: v.paymentDate,
-    nomorBon: v.nomorBon,
     notes: v.notes,
+
+    ...(v.keterangan ? { keterangan: v.keterangan } : {}),
+    ...(v.tanggal ? { tanggal: v.tanggal } : {}),
+    ...(v.pembayaran ? { pembayaran: v.pembayaran } : {}),
+    ...(v.jenisBarang ? { jenisBarang: v.jenisBarang } : {}),
+    ...(v.owner ? { owner: v.owner } : {}),
+    ...(v.paymentDate ? { paymentDate: v.paymentDate } : {}),
+    ...(v.nomorBon ? { nomorBon: v.nomorBon } : {}),
 
     ...(isBan
       ? {
@@ -268,31 +290,13 @@ export function formToItem(
         }
       : {
           merekProduk: v.merekProduk,
-          kodeBarang: v.kodeBarang,
-          typeVelg: v.typeVelg,
-          wide: v.wide,
-          hole: v.hole,
-          et: v.et,
-          colour: v.colour,
-          item: v.item,
-          gtySet: Number(v.gtySet) || 0,
-          standarPrice: Number(v.standarPrice) || 0,
-          discount: Number(v.discount) || 0,
-          dealerPrice: Number(v.dealerPrice) || 0,
-          dprice: Number(v.dprice) || 0,
-          discountType: v.discountType,
-          rawPrice: Number(v.rawPrice) || 0,
-          sswDisc2: Number(v.sswDisc2) || 0,
-          rawPriceAfterDisc: Number(v.rawPriceAfterDisc) || 0,
-          shippingFee: Number(v.shippingFee) || 0,
-          shippingPerSet: Number(v.shippingPerSet) || 0,
-          subTotalModalTP: Number(v.subTotalModalTP) || 0,
-          modal1Set: Number(v.modal1Set) || 0,
-          paymentTipe: v.paymentTipe,
-          up: Number(v.up) || 0,
-          modalToko: Number(v.modalToko) || 0,
-          arrivalDate: v.arrivalDate,
-          stockOwner: v.stockOwner,
+          typeVelg: isVelg ? v.typeVelg : undefined,
+          wide: isVelg ? v.wide : undefined,
+          hole: isVelg ? v.hole : undefined,
+          et: isVelg ? v.et : undefined,
+          colour: isVelg ? v.colour : undefined,
+          nobes: isVelg ? v.nobes : undefined,
+          item: itemCode,
         }),
   };
 }

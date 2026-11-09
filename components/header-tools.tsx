@@ -93,7 +93,7 @@ interface SearchResult {
 const PAGE_RESULTS: SearchResult[] = [
   { id: "p-dashboard", group: "Halaman", title: "Dashboard", subtitle: "Ringkasan usaha", href: "/" },
   { id: "p-distribusi", group: "Halaman", title: "Product Distributor", subtitle: "Stok gudang distributor", href: "/distribusi" },
-  { id: "p-products", group: "Halaman", title: "Product Store", subtitle: "Master Management", href: "/products" },
+  { id: "p-products", group: "Halaman", title: "Product Store", subtitle: "Stok gudang distributor", href: "/distribusi" },
   { id: "p-others", group: "Halaman", title: "Others", subtitle: "Master Management", href: "/others" },
   { id: "p-stock", group: "Halaman", title: "Stock List", subtitle: "Master Management", href: "/stock-list" },
   { id: "p-suppliers", group: "Halaman", title: "Supplier", subtitle: "Master Management", href: "/suppliers" },

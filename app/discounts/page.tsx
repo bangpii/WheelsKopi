@@ -14,7 +14,6 @@ import { AppShell } from "@/components/app-shell";
 import { stores } from "@/lib/master-data";
 import {
   discounts as demoDiscounts,
-  discountTypes,
   type DiscountRecord,
 } from "@/lib/warehouse-data";
 
@@ -48,8 +47,10 @@ function statusFor(
 interface DiscountForm {
   code: string;
   store: string;
+  discountPercent: number;
+  maxCut: number;
   limit: number;
-  type: DiscountRecord["type"];
+  status: DiscountRecord["status"];
   fromDate: string;
   toDate: string;
 }
@@ -57,8 +58,10 @@ interface DiscountForm {
 const emptyForm: DiscountForm = {
   code: "",
   store: stores[0].storeName,
+  discountPercent: 10,
+  maxCut: 100_000,
   limit: 5,
-  type: "Discount",
+  status: "Aktif",
   fromDate: "2026-10-01",
   toDate: "2026-12-31",
 };
@@ -98,8 +101,10 @@ export default function DiscountsPage() {
     setForm({
       code: discount.code,
       store: discount.store,
+      discountPercent: discount.discountPercent,
+      maxCut: discount.maxCut,
       limit: discount.limit,
-      type: discount.type,
+      status: discount.status,
       fromDate: discount.fromDate,
       toDate: discount.toDate,
     });
@@ -110,7 +115,10 @@ export default function DiscountsPage() {
     event.preventDefault();
 
     const status =
-      new Date(form.toDate).getTime() < Date.now() ? "Tidak Aktif" : "Aktif";
+      form.status === "Aktif" &&
+      new Date(form.toDate).getTime() < Date.now()
+        ? "Tidak Aktif"
+        : form.status;
 
     if (editing) {
       setDiscounts(
@@ -193,8 +201,9 @@ export default function DiscountsPage() {
                 <tr>
                   <th className={thClass}>Kode Voucher</th>
                   <th className={thClass}>Store</th>
+                  <th className={`${thClass} text-right`}>Discount</th>
+                  <th className={`${thClass} text-right`}>Max Cut</th>
                   <th className={`${thClass} text-center`}>Limit</th>
-                  <th className={thClass}>Type</th>
                   <th className={thClass}>From Date</th>
                   <th className={thClass}>To Date</th>
                   <th className={thClass}>Status</th>
@@ -206,7 +215,7 @@ export default function DiscountsPage() {
                 {filtered.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="px-6 py-16 text-center text-sm text-muted-foreground"
                     >
                       Belum ada voucher yang cocok.
@@ -235,14 +244,23 @@ export default function DiscountsPage() {
                           {discount.store}
                         </td>
                         <td
+                          className={`${tdClass} text-right font-mono font-semibold tabular-nums`}
+                        >
+                          {discount.discountPercent}%
+                        </td>
+                        <td
+                          className={`${tdClass} text-right font-mono tabular-nums`}
+                        >
+                          {new Intl.NumberFormat("id-ID", {
+                            style: "currency",
+                            currency: "IDR",
+                            maximumFractionDigits: 0,
+                          }).format(discount.maxCut)}
+                        </td>
+                        <td
                           className={`${tdClass} text-center font-mono tabular-nums`}
                         >
                           {discount.limit}
-                        </td>
-                        <td className={tdClass}>
-                          <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-medium">
-                            {discount.type}
-                          </span>
                         </td>
                         <td className={`${tdClass} text-muted-foreground`}>
                           {formatDate(discount.fromDate)}
@@ -343,6 +361,39 @@ export default function DiscountsPage() {
                   </select>
                 </label>
                 <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Discount (%)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    required
+                    value={form.discountPercent}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        discountPercent: Number(event.target.value),
+                      })
+                    }
+                    className={fieldClass}
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Max Cut (Rp)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    required
+                    value={form.maxCut}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        maxCut: Number(event.target.value),
+                      })
+                    }
+                    className={fieldClass}
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
                   <span className="font-medium">Limit</span>
                   <input
                     type="number"
@@ -355,26 +406,40 @@ export default function DiscountsPage() {
                     className={fieldClass}
                   />
                 </label>
-                <label className="space-y-1.5 text-sm">
-                  <span className="font-medium">Type</span>
-                  <select
-                    value={form.type}
-                    onChange={(event) => {
-                      const type = discountTypes.find(
-                        (option) => option === event.target.value,
-                      );
-
-                      if (type) {
-                        setForm({ ...form, type });
-                      }
-                    }}
-                    className={fieldClass}
+                <div className="space-y-1.5 text-sm">
+                  <span className="font-medium">Status</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        status:
+                          form.status === "Aktif" ? "Tidak Aktif" : "Aktif",
+                      })
+                    }
+                    aria-pressed={form.status === "Aktif"}
+                    className={`flex h-[42px] w-full items-center justify-between rounded-xl border px-3 text-sm font-semibold transition-colors ${
+                      form.status === "Aktif"
+                        ? "border-success/30 bg-success-soft text-success"
+                        : "border-border bg-muted/60 text-muted-foreground"
+                    }`}
                   >
-                    {discountTypes.map((type) => (
-                      <option key={type}>{type}</option>
-                    ))}
-                  </select>
-                </label>
+                    <span>{form.status}</span>
+                    <span
+                      className={`relative flex h-6 w-11 items-center rounded-full transition-colors ${
+                        form.status === "Aktif" ? "bg-success" : "bg-border"
+                      }`}
+                    >
+                      <span
+                        className={`absolute size-5 rounded-full bg-white shadow-sm transition-transform ${
+                          form.status === "Aktif"
+                            ? "translate-x-[22px]"
+                            : "translate-x-0.5"
+                        }`}
+                      />
+                    </span>
+                  </button>
+                </div>
                 <label className="space-y-1.5 text-sm">
                   <span className="font-medium">From Date</span>
                   <input

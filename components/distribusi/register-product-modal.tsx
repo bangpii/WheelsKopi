@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import {
+  Box,
   Check,
+  Disc3,
   ImagePlus,
   PackagePlus,
-  Upload,
   X,
-  Disc3,
-  Box,
 } from "lucide-react";
 import type {
   DistribusiCategory,
@@ -23,1124 +22,771 @@ import {
 } from "@/lib/ban-reference-data";
 import type { Product } from "@/lib/context/data-context";
 
-/* ------------------------------------------------------------------ */
-/*  Props                                                             */
-/* ------------------------------------------------------------------ */
-
 interface RegisterProductModalProps {
   suppliers: { name: string }[];
-  initialData?: Product | null; // Mendukung mode Edit
+  categories?: string[];
+  initialSubKategori?: string;
+  initialData?: Product | null;
   onClose: () => void;
   onSubmit: (values: DistribusiFormValues) => void;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Konstanta Form                                                    */
-/* ------------------------------------------------------------------ */
-
-const TODAY = new Date().toISOString().slice(0, 10);
-
-const emptyForm: DistribusiFormValues = {
-  kategori: "Ban",
-  subKategori: "",
-  namaBarang: "",
-  ukuran: "",
-  ring: "",
-  hargaModalAsli: "",
-  hargaModalToko: "",
-  stok: "",
-  gambar: "",
-  supplier: "",
-
-  tanggal: TODAY,
-  pembayaran: "Lunas",
-  jenisBarang: "",
-  owner: "",
-  paymentDate: TODAY,
-  nomorBon: "",
-  notes: "",
-
-  merekBan: "",
-  typeBan: "",
-  ukuranTapak: "",
-  ukuranTinggi: "",
-  hargaTagihanToko: "",
-
-  merekProduk: "",
-  kodeBarang: "",
-  typeVelg: "",
-  wide: "",
-  hole: "",
-  et: "",
-  colour: "",
-  item: "",
-  gtySet: "",
-  standarPrice: "",
-  discount: "",
-  dealerPrice: "",
-  dprice: "",
-  discountType: "Cash",
-  rawPrice: "",
-  sswDisc2: "",
-  rawPriceAfterDisc: "",
-  shippingFee: "",
-  shippingPerSet: "",
-  subTotalModalTP: "",
-  modal1Set: "",
-  paymentTipe: "",
-  up: "",
-  modalToko: "",
-  arrivalDate: TODAY,
-  stockOwner: "",
-};
 
 const fieldClass =
   "w-full rounded-xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-sm text-foreground outline-none backdrop-blur-sm transition-colors placeholder:text-muted-foreground/70 focus:border-primary/60 focus:ring-2 focus:ring-ring/40";
 
 const labelClass =
-  "mb-1.5 block text-[12px] font-semibold tracking-wide text-muted-foreground uppercase";
+  "mb-1.5 block text-[11px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
 
-/* ------------------------------------------------------------------ */
-/*  Daftar Field Velg & Others                                        */
-/* ------------------------------------------------------------------ */
-
-type VelgNumericField =
-  | "gtySet"
-  | "standarPrice"
-  | "discount"
-  | "dealerPrice"
-  | "dprice"
-  | "rawPrice"
-  | "sswDisc2"
-  | "rawPriceAfterDisc"
-  | "shippingFee"
-  | "shippingPerSet"
-  | "subTotalModalTP"
-  | "modal1Set"
-  | "up"
-  | "modalToko";
-
-type VelgTextField = "discountType" | "paymentTipe";
-
-const VELG_NUMERIC_FIELDS: ReadonlyArray<{
-  key: VelgNumericField;
-  label: string;
-}> = [
-  { key: "gtySet", label: "GTY (Set)" },
-  { key: "standarPrice", label: "Standar Price" },
-  { key: "discount", label: "Discount" },
-  { key: "dealerPrice", label: "Dealer Price" },
-  { key: "dprice", label: "Dprice" },
-  { key: "rawPrice", label: "Raw Price" },
-  { key: "sswDisc2", label: "SSW Disc 2%" },
-  { key: "rawPriceAfterDisc", label: "Raw Price (after disc)" },
-  { key: "shippingFee", label: "Shipping Fee" },
-  { key: "shippingPerSet", label: "Shipping / Set" },
-  { key: "subTotalModalTP", label: "Sub Total Modal TP" },
-  { key: "modal1Set", label: "Modal 1 Set" },
-  { key: "up", label: "UP" },
-  { key: "modalToko", label: "Modal Toko" },
-];
-
-const VELG_TEXT_FIELDS: ReadonlyArray<{
-  key: VelgTextField;
-  label: string;
-}> = [
-  { key: "discountType", label: "Discount Type / Cash" },
-  { key: "paymentTipe", label: "Payment Tipe" },
-];
-
-/* ------------------------------------------------------------------ */
-/*  Helper Build Item Code (Velg)                                     */
-/* ------------------------------------------------------------------ */
-
-function buildItemCode(v: DistribusiFormValues): string {
-  const merek = (v.merekProduk ?? "").toUpperCase().trim();
-  const type = (v.typeVelg ?? "").trim();
-  const ring = (v.ring ?? "").replace(/^R/i, "").trim();
-  const wide = (v.wide ?? "").replace(".", ",").trim();
-  const hole = (v.hole ?? "").trim();
-  const et = (v.et ?? "").trim();
-  const colour = (v.colour ?? "").toUpperCase().trim();
-
-  let seq = "";
-  if (v.tanggal) {
-    const d = new Date(v.tanggal);
-    if (!Number.isNaN(d.getTime())) {
-      const month = d.toLocaleDateString("en-US", { month: "short" });
-      const day = String(d.getDate()).padStart(2, "0");
-      seq = `#${month}${day}01`;
-    }
+function createInitialForm(
+  initialData: Product | null | undefined,
+  suppliers: { name: string }[],
+  initialSubKategori?: string,
+): DistribusiFormValues {
+  if (initialData) {
+    return {
+      kategori: initialData.kategoriUtama,
+      supplier: initialData.supplier ?? suppliers[0]?.name ?? "",
+      stok: String(initialData.stok ?? ""),
+      gambar: initialData.gambar ?? "",
+      merekBan: initialData.merekBan ?? "",
+      typeBan: initialData.typeBan ?? "",
+      ring: initialData.ring ?? "",
+      ukuranTapak: initialData.ukuranTapak ?? "",
+      ukuranTinggi: initialData.ukuranTinggi ?? "",
+      subKategori:
+        initialData.kategoriUtama === "Others"
+          ? initialData.subKategori
+          : undefined,
+      merekProduk: initialData.merekProduk ?? "",
+      typeVelg: initialData.typeVelg ?? "",
+      wide: initialData.wide ?? "",
+      hole: initialData.hole ?? "",
+      et: initialData.et ?? "",
+      colour: initialData.colour ?? "",
+      nobes: initialData.nobes ?? "",
+      keterangan: initialData.keterangan ?? "",
+      notes: initialData.notes ?? "",
+      namaBarang: initialData.namaBarang,
+      ukuran: initialData.ukuran,
+      tanggal: initialData.tanggal,
+      hargaModalAsli: String(initialData.hargaModalAsli ?? ""),
+      hargaModalToko: String(initialData.hargaModalToko ?? ""),
+      hargaTagihanToko: String(initialData.hargaTagihanToko ?? ""),
+      standarPrice: String(initialData.standarPrice ?? ""),
+    };
   }
 
-  return [merek, type, ring, wide, hole, et, colour, seq]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
+  return {
+    kategori: initialSubKategori ? "Others" : "Ban",
+    supplier: "",
+    stok: "",
+    gambar: "",
+    merekBan: "",
+    typeBan: "",
+    ring: "",
+    ukuranTapak: "",
+    ukuranTinggi: "",
+    subKategori: initialSubKategori ?? "",
+    merekProduk: "",
+    typeVelg: "",
+    wide: "",
+    hole: "",
+    et: "",
+    colour: "",
+    nobes: "",
+    keterangan: "",
+    notes: "",
+    standarPrice: "",
+  };
 }
-
-/* ------------------------------------------------------------------ */
-/*  Komponen Modal                                                    */
-/* ------------------------------------------------------------------ */
 
 export function RegisterProductModal({
   suppliers,
+  categories = [...othersCategories],
+  initialSubKategori,
   initialData,
   onClose,
   onSubmit,
 }: RegisterProductModalProps) {
-  
-  // Inisialisasi state: Cek apakah sedang Edit atau Tambah Baru
-  const [formData, setFormData] = useState<DistribusiFormValues>(() => {
-    if (initialData) {
-      return {
-        ...initialData,
-        kategori: initialData.kategoriUtama,
-        // Konversi semua field angka ke string untuk form input
-        hargaModalAsli: String(initialData.hargaModalAsli ?? ""),
-        hargaModalToko: String(initialData.hargaModalToko ?? ""),
-        stok: String(initialData.stok ?? ""),
-        hargaTagihanToko: String(initialData.hargaTagihanToko ?? ""),
-        gtySet: String(initialData.gtySet ?? ""),
-        standarPrice: String(initialData.standarPrice ?? ""),
-        discount: String(initialData.discount ?? ""),
-        dealerPrice: String(initialData.dealerPrice ?? ""),
-        dprice: String(initialData.dprice ?? ""),
-        rawPrice: String(initialData.rawPrice ?? ""),
-        sswDisc2: String(initialData.sswDisc2 ?? ""),
-        rawPriceAfterDisc: String(initialData.rawPriceAfterDisc ?? ""),
-        shippingFee: String(initialData.shippingFee ?? ""),
-        shippingPerSet: String(initialData.shippingPerSet ?? ""),
-        subTotalModalTP: String(initialData.subTotalModalTP ?? ""),
-        modal1Set: String(initialData.modal1Set ?? ""),
-        up: String(initialData.up ?? ""),
-        modalToko: String(initialData.modalToko ?? ""),
-      } as unknown as DistribusiFormValues;
-    }
-    return {
-      ...emptyForm,
-      supplier: suppliers[0]?.name ?? "",
-    };
-  });
-
+  const [formData, setFormData] = useState<DistribusiFormValues>(() =>
+    createInitialForm(initialData, suppliers, initialSubKategori),
+  );
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
-
-  const update = (patch: Partial<DistribusiFormValues>) =>
-    setFormData((prev) => ({ ...prev, ...patch }));
-
-  const setKategori = (kategori: DistribusiCategory) => {
-    setFormData((prev) => ({
-      ...prev,
-      kategori,
-      subKategori: "",
-      ring: "",
-      ukuran: "",
-      merekBan: "",
-      typeBan: "",
-      ukuranTapak: "",
-      ukuranTinggi: "",
-      merekProduk: "",
-      typeVelg: "",
-      wide: "",
-      hole: "",
-      et: "",
-      colour: "",
-      item: "",
-    }));
-  };
-
-  const setSubKategori = (subKategori: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      subKategori,
-      ...(subKategori !== "Velg"
-        ? { ring: "", wide: "", hole: "", et: "", colour: "", item: "" }
-        : {}),
-    }));
-  };
-
-  const typeBanOptions = useMemo(
-    () => (formData.merekBan ? BAN_BRANDS[formData.merekBan] ?? [] : []),
-    [formData.merekBan],
-  );
-
-  const autoItem = useMemo(
-    () =>
-      formData.kategori === "Others" && formData.subKategori === "Velg"
-        ? buildItemCode(formData)
-        : "",
-    [formData],
-  );
-
   const isBan = formData.kategori === "Ban";
-  const isOthers = formData.kategori === "Others";
-  const isVelg = isOthers && formData.subKategori === "Velg";
+  const isVelg = !isBan && formData.subKategori === "Velg";
 
-  const validate = (): string | null => {
-    if (!formData.supplier) return "Supplier wajib diisi.";
-    // Perbaikan: Jika sedang Edit dan tidak upload gambar baru, izinkan simpan (pakai gambar lama)
-    if (!formData.gambar && !initialData) return "Upload gambar produk terlebih dahulu.";
-    
-    if (!formData.stok) return "Stok wajib diisi.";
+  const update = (patch: Partial<DistribusiFormValues>) => {
+    setFormData((prev) => ({ ...prev, ...patch }));
+    setError("");
+  };
+
+  const switchCategory = (kategori: DistribusiCategory) => {
+    update({
+      kategori,
+      ...(kategori === "Others" && !formData.subKategori
+        ? { subKategori: "Velg" }
+        : {}),
+    });
+  };
+
+  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("File yang diupload harus berupa gambar.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Ukuran gambar maksimal 2MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      update({ gambar: String(reader.result ?? "") });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const validate = (): string => {
+    if (!formData.supplier.trim()) return "Supplier wajib dipilih.";
+    if (!formData.stok.trim() || Number(formData.stok) < 0) {
+      return "Stok wajib diisi dengan angka 0 atau lebih.";
+    }
+    if (!formData.gambar && !initialData?.gambar) {
+      return "Upload gambar produk terlebih dahulu.";
+    }
 
     if (isBan) {
-      if (!formData.merekBan) return "Merek ban wajib dipilih.";
-      if (!formData.typeBan) return "Type ban wajib dipilih.";
-      if (!formData.ring) return "Ring wajib dipilih.";
-      if (!formData.ukuranTapak) return "Tapak / lebar wajib diisi.";
-      if (!formData.ukuranTinggi) return "Tinggi wajib diisi.";
+      if (!formData.merekBan?.trim()) return "Merek ban wajib dipilih.";
+      if (!formData.typeBan?.trim()) return "Type ban wajib dipilih.";
+      if (!formData.ring?.trim()) return "Ring wajib dipilih.";
+      if (!formData.ukuranTapak?.trim()) return "Tapak/lebar wajib diisi.";
+      if (!formData.ukuranTinggi?.trim()) return "Tinggi wajib diisi.";
+      return "";
     }
 
-    if (isOthers) {
-      if (!formData.subKategori) return "Jenis produk wajib dipilih.";
-      if (!formData.merekProduk) return "Merek produk wajib diisi.";
+    if (!formData.subKategori) return "Jenis produk wajib dipilih.";
+    if (!formData.merekProduk?.trim()) return "Merek produk wajib diisi.";
 
-      if (isVelg) {
-        if (!formData.ring) return "Ring velg wajib dipilih.";
-        if (!formData.typeVelg) return "Type velg wajib diisi.";
-        if (!formData.wide) return "Wide wajib diisi.";
-        if (!formData.hole) return "Hole wajib diisi.";
-        if (!formData.et) return "ET wajib diisi.";
-        if (!formData.colour) return "Colour wajib diisi.";
-      }
+    if (isVelg) {
+      if (!formData.typeVelg?.trim()) return "Type velg wajib diisi.";
+      if (!formData.ring?.trim()) return "Ring wajib dipilih.";
+      if (!formData.wide?.trim()) return "Wide wajib diisi.";
+      if (!formData.hole?.trim()) return "Hole wajib diisi.";
+      if (!formData.et?.trim()) return "ET wajib diisi.";
+      if (!formData.colour?.trim()) return "Colour wajib diisi.";
+      return "";
     }
 
-    if (!formData.hargaModalAsli) return "Harga modal asli wajib diisi.";
-    if (!formData.hargaModalToko) return "Harga tagihan toko wajib diisi.";
-
-    return null;
+    if (!formData.keterangan?.trim()) return "Keterangan wajib diisi.";
+    return "";
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const err = validate();
-    if (err) {
-      setError(err);
+    const message = validate();
+    if (message) {
+      setError(message);
       return;
     }
 
-    setError("");
     onSubmit({
-      ...formData,
-      item: isVelg ? autoItem : "",
-      stok: formData.stok || "0",
+      kategori: formData.kategori,
+      supplier: formData.supplier.trim(),
+      stok: formData.stok,
+      gambar: formData.gambar,
+      merekBan: isBan ? formData.merekBan : undefined,
+      typeBan: isBan ? formData.typeBan : undefined,
+      ring: formData.ring,
+      ukuranTapak: isBan ? formData.ukuranTapak : undefined,
+      ukuranTinggi: isBan ? formData.ukuranTinggi : undefined,
+      subKategori: isBan ? undefined : formData.subKategori,
+      merekProduk: isBan ? undefined : formData.merekProduk,
+      typeVelg: isVelg ? formData.typeVelg : undefined,
+      wide: isVelg ? formData.wide : undefined,
+      hole: isVelg ? formData.hole : undefined,
+      et: isVelg ? formData.et : undefined,
+      colour: isVelg ? formData.colour : undefined,
+      nobes: isVelg ? formData.nobes : undefined,
+      keterangan: isBan || isVelg ? undefined : formData.keterangan,
+      notes: isBan || isVelg ? undefined : formData.notes,
+      standarPrice: formData.standarPrice,
+      // Legacy tidak ditampilkan lagi; nilai lama tetap dipertahankan saat edit.
+      hargaModalAsli: initialData
+        ? String(initialData.hargaModalAsli ?? "")
+        : undefined,
+      hargaModalToko: initialData
+        ? String(initialData.hargaModalToko ?? "")
+        : undefined,
+      hargaTagihanToko: initialData
+        ? String(initialData.hargaTagihanToko ?? "")
+        : undefined,
     });
   };
 
-  const handleImage = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => update({ gambar: String(reader.result ?? "") });
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  };
+  const typeOptions = formData.merekBan
+    ? BAN_BRANDS[formData.merekBan] ?? []
+    : [];
+  const typeSelectOptions =
+    formData.typeBan && !typeOptions.includes(formData.typeBan)
+      ? [formData.typeBan, ...typeOptions]
+      : typeOptions;
 
   return (
-    <div className="fixed inset-0 z-70 flex items-center justify-center p-4 sm:p-6">
-      <div
-        aria-hidden="true"
+    <div className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-6">
+      <button
+        type="button"
+        aria-label="Tutup modal"
         onClick={onClose}
-        className="absolute inset-0 bg-black/45 backdrop-blur-md supports-backdrop-filter:bg-black/35"
+        className="absolute inset-0 bg-black/45 backdrop-blur-md"
       />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="register-product-title"
-        className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border-white/60 liquid-glass"
+        className="surface relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden"
       >
-        <div className="pointer-events-none absolute -top-24 -left-16 size-64 rounded-full bg-primary/20 blur-3xl dark:bg-primary/25" />
-        <div className="pointer-events-none absolute -right-20 -bottom-24 size-64 rounded-full bg-(--chart-2)/20 blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent dark:via-white/20" />
-
-        <div className="relative flex items-start justify-between gap-4 px-6 pt-6 pb-5 sm:px-8">
-          <div className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/12 text-primary ring-1 ring-primary/20">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+          <div className="flex items-start gap-3">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
               <PackagePlus className="size-5" />
             </span>
             <div>
-              <p className="font-mono text-[10px] tracking-[0.26em] text-primary uppercase">
-                {initialData ? "Edit" : "Register"}
+              <p className="font-mono text-[10px] tracking-[0.28em] text-primary uppercase">
+                {initialData ? "Edit Produk" : "Registrasi Produk"}
               </p>
               <h2
                 id="register-product-title"
-                className="font-display text-xl font-semibold tracking-tight"
+                className="font-display mt-1 text-lg font-semibold tracking-tight"
               >
-                {initialData ? "Perbarui Produk" : "Produk Baru"}
+                {initialData ? "Perbarui Data Produk" : "Daftarkan Produk Baru"}
               </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pilih kategori, lengkapi spesifikasi, lalu simpan.
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup form"
-            className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background/50 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Tutup"
+            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <X className="size-4.5" />
+            <X className="size-4" />
           </button>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="relative flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="no-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-6 sm:px-8">
-            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-background/40 p-1.5 backdrop-blur-sm">
-              {(["Ban", "Others"] as const).map((kategori) => {
-                const Icon = kategori === "Ban" ? Disc3 : Box;
+          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+            <div className="inline-flex w-full rounded-xl border border-border bg-muted/50 p-1 sm:w-auto">
+              {(["Ban", "Others"] as const).map((tab) => {
+                const TabIcon = tab === "Ban" ? Disc3 : Box;
+                const active = formData.kategori === tab;
                 return (
                   <button
-                    key={kategori}
+                    key={tab}
                     type="button"
-                    onClick={() => setKategori(kategori)}
-                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                      formData.kategori === kategori
-                        ? "bg-primary text-primary-foreground shadow-[0_10px_24px_-12px_var(--primary)]"
-                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                    onClick={() => switchCategory(tab)}
+                    className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold transition-colors sm:flex-none ${
+                      active
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Icon className="size-4" />
-                    Daftar {kategori}
+                    <TabIcon className="size-4" />
+                    {tab}
                   </button>
                 );
               })}
             </div>
 
-            {/* Supplier — BISA DIUBAH */}
-            <div>
-              <label className={labelClass} htmlFor="supplier">
-                Pilih Supplier
-              </label>
-              <select
-                id="supplier"
-                required
-                value={formData.supplier}
-                onChange={(e) => update({ supplier: e.target.value })}
-                className={fieldClass}
-              >
-                <option value="">-- Pilih Supplier --</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.name} value={supplier.name}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {isBan && (
-              <section className="space-y-5 rounded-2xl border border-border/60 bg-background/30 p-4 backdrop-blur-sm">
-                <h3 className="font-display text-sm font-semibold">
-                  Data Ban
-                </h3>
-
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                  <div>
-                    <label className={labelClass} htmlFor="merekBan">
-                      Merek Ban (Wajib)
-                    </label>
-                    <select
-                      id="merekBan"
-                      required
-                      value={formData.merekBan ?? ""}
-                      onChange={(e) =>
-                        update({ merekBan: e.target.value, typeBan: "" })
-                      }
-                      className={fieldClass}
-                    >
-                      <option value="">-- Pilih Merek --</option>
-                      {BAN_BRAND_LIST.map((merek) => (
-                        <option key={merek} value={merek}>
-                          {merek}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="typeBan">
-                      Type Ban (Wajib)
-                    </label>
-                    <select
-                      id="typeBan"
-                      required
-                      value={formData.typeBan ?? ""}
-                      onChange={(e) => update({ typeBan: e.target.value })}
-                      disabled={!formData.merekBan}
-                      className={`${fieldClass} disabled:opacity-50`}
-                    >
-                      <option value="">-- Pilih Type --</option>
-                      {typeBanOptions.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="ringBan">
-                      Ring (Wajib)
-                    </label>
-                    <select
-                      id="ringBan"
-                      required
-                      value={formData.ring}
-                      onChange={(e) => update({ ring: e.target.value })}
-                      className={fieldClass}
-                    >
-                      <option value="">-- Pilih Ring --</option>
-                      {BAN_RING_OPTIONS.map((ring) => (
-                        <option key={ring} value={ring}>
-                          {ring}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelClass} htmlFor="tapak">
-                        Tapak / Lebar
-                      </label>
-                      <input
-                        id="tapak"
-                        required
-                        type="text"
-                        value={formData.ukuranTapak ?? ""}
-                        onChange={(e) =>
-                          update({ ukuranTapak: e.target.value })
-                        }
-                        className={fieldClass}
-                        placeholder="Cth: 195"
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass} htmlFor="tinggi">
-                        Tinggi
-                      </label>
-                      <input
-                        id="tinggi"
-                        required
-                        type="text"
-                        value={formData.ukuranTinggi ?? ""}
-                        onChange={(e) =>
-                          update({ ukuranTinggi: e.target.value })
-                        }
-                        className={fieldClass}
-                        placeholder="Cth: 65"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="stokBan">
-                      Stok (Wajib)
-                    </label>
-                    <input
-                      id="stokBan"
-                      required
-                      min="0"
-                      type="number"
-                      value={formData.stok}
-                      onChange={(e) => update({ stok: e.target.value })}
-                      className={fieldClass}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="modalAsliBan">
-                      Harga Modal Asli
-                    </label>
-                    <input
-                      id="modalAsliBan"
-                      required
-                      min="0"
-                      type="number"
-                      value={formData.hargaModalAsli}
-                      onChange={(e) =>
-                        update({ hargaModalAsli: e.target.value })
-                      }
-                      className={fieldClass}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="tagihanTokoBan">
-                      Harga Tagihan Toko
-                    </label>
-                    <input
-                      id="tagihanTokoBan"
-                      required
-                      min="0"
-                      type="number"
-                      value={formData.hargaModalToko}
-                      onChange={(e) =>
-                        update({ hargaModalToko: e.target.value })
-                      }
-                      className={fieldClass}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="tanggalBan">
-                      Tanggal / Bulan
-                    </label>
-                    <input
-                      id="tanggalBan"
-                      type="date"
-                      value={formData.tanggal ?? ""}
-                      onChange={(e) => update({ tanggal: e.target.value })}
-                      className={fieldClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="bayarBan">
-                      Pembayaran
-                    </label>
-                    <select
-                      id="bayarBan"
-                      value={formData.pembayaran ?? "Lunas"}
-                      onChange={(e) =>
-                        update({
-                          pembayaran: e.target
-                            .value as DistribusiFormValues["pembayaran"],
-                        })
-                      }
-                      className={fieldClass}
-                    >
-                      <option value="Lunas">Lunas</option>
-                      <option value="Bon">Bon</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="jenisBan">
-                      Jenis Barang
-                    </label>
-                    <input
-                      id="jenisBan"
-                      type="text"
-                      value={formData.jenisBarang ?? ""}
-                      onChange={(e) => update({ jenisBarang: e.target.value })}
-                      className={fieldClass}
-                      placeholder="Cth: Ban Tubeless"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="ownerBan">
-                      Owner
-                    </label>
-                    <input
-                      id="ownerBan"
-                      type="text"
-                      value={formData.owner ?? ""}
-                      onChange={(e) => update({ owner: e.target.value })}
-                      className={fieldClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="payDateBan">
-                      Payment Date
-                    </label>
-                    <input
-                      id="payDateBan"
-                      type="date"
-                      value={formData.paymentDate ?? ""}
-                      onChange={(e) => update({ paymentDate: e.target.value })}
-                      className={fieldClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass} htmlFor="nomorBonBan">
-                      Nomor Bon
-                    </label>
-                    <input
-                      id="nomorBonBan"
-                      type="text"
-                      value={formData.nomorBon ?? ""}
-                      onChange={(e) => update({ nomorBon: e.target.value })}
-                      className={fieldClass}
-                    />
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {isOthers && (
-              <>
-                <div>
-                  <label className={labelClass} htmlFor="jenisProduk">
-                    Jenis Produk (Wajib)
-                  </label>
+            {isBan ? (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label>
+                  <span className={labelClass}>Merek Ban</span>
                   <select
-                    id="jenisProduk"
-                    required
-                    value={formData.subKategori}
-                    onChange={(e) => setSubKategori(e.target.value)}
+                    value={formData.merekBan ?? ""}
+                    onChange={(event) =>
+                      update({
+                        merekBan: event.target.value,
+                        typeBan: "",
+                      })
+                    }
                     className={fieldClass}
                   >
-                    <option value="">-- Pilih Jenis --</option>
-                    {othersCategories.map((jenis) => (
-                      <option key={jenis} value={jenis}>
-                        {jenis}
+                    <option value="">Pilih merek ban</option>
+                    {BAN_BRAND_LIST.map((brand) => (
+                      <option key={brand} value={brand}>
+                        {brand}
                       </option>
                     ))}
                   </select>
+                </label>
+
+                <label>
+                  <span className={labelClass}>Type Ban</span>
+                  <select
+                    value={formData.typeBan ?? ""}
+                    onChange={(event) =>
+                      update({ typeBan: event.target.value })
+                    }
+                    className={fieldClass}
+                    disabled={typeSelectOptions.length === 0}
+                  >
+                    <option value="">
+                      {formData.merekBan
+                        ? "Pilih type ban"
+                        : "Pilih merek terlebih dahulu"}
+                    </option>
+                    {typeSelectOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span className={labelClass}>Ring</span>
+                  <select
+                    value={formData.ring ?? ""}
+                    onChange={(event) => update({ ring: event.target.value })}
+                    className={fieldClass}
+                  >
+                    <option value="">Pilih ring</option>
+                    {BAN_RING_OPTIONS.map((ring) => (
+                      <option key={ring} value={ring}>
+                        {ring}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label>
+                    <span className={labelClass}>Tapak / Lebar</span>
+                    <input
+                      value={formData.ukuranTapak ?? ""}
+                      onChange={(event) =>
+                        update({ ukuranTapak: event.target.value })
+                      }
+                      placeholder="195"
+                      inputMode="numeric"
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label>
+                    <span className={labelClass}>Tinggi</span>
+                    <input
+                      value={formData.ukuranTinggi ?? ""}
+                      onChange={(event) =>
+                        update({ ukuranTinggi: event.target.value })
+                      }
+                      placeholder="65"
+                      inputMode="numeric"
+                      className={fieldClass}
+                    />
+                  </label>
                 </div>
 
-                <section className="space-y-5 rounded-2xl border border-border/60 bg-background/30 p-4 backdrop-blur-sm">
-                  <h3 className="font-display text-sm font-semibold">
-                    {isVelg ? "Data Velg" : "Data Produk Lain"}
-                  </h3>
-
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                    <div>
-                      <label className={labelClass} htmlFor="merekProduk">
-                        Merek Produk (Wajib)
-                      </label>
-                      <input
-                        id="merekProduk"
-                        required
-                        type="text"
-                        value={formData.merekProduk ?? ""}
-                        onChange={(e) =>
-                          update({ merekProduk: e.target.value })
-                        }
-                        className={fieldClass}
-                        placeholder={isVelg ? "Cth: SSW" : "Cth: KYB"}
-                      />
-                    </div>
-
-                    <div>
-                      <label className={labelClass} htmlFor="typeProduk">
-                        {isVelg ? "Type Velg (Wajib)" : "Keterangan"}
-                      </label>
-                      <input
-                        id="typeProduk"
-                        required={isVelg}
-                        type="text"
-                        value={
-                          isVelg
-                            ? formData.typeVelg ?? ""
-                            : formData.namaBarang
-                        }
-                        onChange={(e) =>
-                          isVelg
-                            ? update({ typeVelg: e.target.value })
-                            : update({ namaBarang: e.target.value })
-                        }
-                        className={fieldClass}
-                        placeholder={
-                          isVelg ? "Cth: S280" : "Cth: Shock Belakang"
-                        }
-                      />
-                    </div>
-
-                    {/* Spesifikasi Velg HANYA muncul untuk VELG */}
-                    {isVelg && (
-                      <>
-                        <div>
-                          <label className={labelClass} htmlFor="ringOthers">
-                            Ring (Wajib)
-                          </label>
-                          <select
-                            id="ringOthers"
-                            required
-                            value={formData.ring}
-                            onChange={(e) => update({ ring: e.target.value })}
-                            className={fieldClass}
-                          >
-                            <option value="">-- Pilih Ring --</option>
-                            {BAN_RING_OPTIONS.map((ring) => (
-                              <option key={ring} value={ring}>
-                                {ring}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className={labelClass} htmlFor="wide">
-                            Wide (Wajib)
-                          </label>
-                          <input
-                            id="wide"
-                            required
-                            type="text"
-                            value={formData.wide ?? ""}
-                            onChange={(e) => update({ wide: e.target.value })}
-                            className={fieldClass}
-                            placeholder="Cth: 9,5"
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass} htmlFor="hole">
-                            Hole (Wajib)
-                          </label>
-                          <input
-                            id="hole"
-                            required
-                            type="text"
-                            value={formData.hole ?? ""}
-                            onChange={(e) => update({ hole: e.target.value })}
-                            className={fieldClass}
-                            placeholder="Cth: 6x139.7"
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass} htmlFor="et">
-                            ET (Wajib)
-                          </label>
-                          <input
-                            id="et"
-                            required
-                            type="text"
-                            value={formData.et ?? ""}
-                            onChange={(e) => update({ et: e.target.value })}
-                            className={fieldClass}
-                            placeholder="Cth: 25"
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass} htmlFor="colour">
-                            Colour (Wajib)
-                          </label>
-                          <input
-                            id="colour"
-                            required
-                            type="text"
-                            value={formData.colour ?? ""}
-                            onChange={(e) => update({ colour: e.target.value })}
-                            className={fieldClass}
-                            placeholder="Cth: BMC"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className={labelClass} htmlFor="itemAuto">
-                            Item (auto)
-                          </label>
-                          <input
-                            id="itemAuto"
-                            readOnly
-                            value={autoItem}
-                            className={`${fieldClass} bg-muted/60 text-muted-foreground`}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Harga & stok dasar (muncul untuk semua Others) */}
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    <div>
-                      <label className={labelClass} htmlFor="stokOthers">
-                        Stok
-                      </label>
-                      <input
-                        id="stokOthers"
-                        required
-                        min="0"
-                        type="number"
-                        value={formData.stok}
-                        onChange={(e) => update({ stok: e.target.value })}
-                        className={fieldClass}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className={labelClass}
-                        htmlFor="modalAsliOthers"
-                      >
-                        Harga Modal Asli
-                      </label>
-                      <input
-                        id="modalAsliOthers"
-                        required
-                        min="0"
-                        type="number"
-                        value={formData.hargaModalAsli}
-                        onChange={(e) =>
-                          update({ hargaModalAsli: e.target.value })
-                        }
-                        className={fieldClass}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className={labelClass}
-                        htmlFor="modalTokoOthers"
-                      >
-                        Harga Tagihan Toko
-                      </label>
-                      <input
-                        id="modalTokoOthers"
-                        required
-                        min="0"
-                        type="number"
-                        value={formData.hargaModalToko}
-                        onChange={(e) =>
-                          update({ hargaModalToko: e.target.value })
-                        }
-                        className={fieldClass}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Field harga lengkap (muncul untuk semua Others) */}
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    {VELG_NUMERIC_FIELDS.map(({ key, label }) => (
-                      <div key={key}>
-                        <label className={labelClass} htmlFor={`v-${key}`}>
-                          {label}
-                        </label>
-                        <input
-                          id={`v-${key}`}
-                          type="number"
-                          min="0"
-                          value={formData[key] ?? ""}
-                          onChange={(e) =>
-                            update({
-                              [key]: e.target.value,
-                            } as Partial<DistribusiFormValues>)
-                          }
-                          className={fieldClass}
-                          placeholder="0"
-                        />
-                      </div>
+                <label className="sm:col-span-2">
+                  <span className={labelClass}>Supplier</span>
+                  <select
+                    value={formData.supplier}
+                    onChange={(event) =>
+                      update({ supplier: event.target.value })
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="">Pilih supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.name} value={supplier.name}>
+                        {supplier.name}
+                      </option>
                     ))}
+                  </select>
+                </label>
 
-                    {VELG_TEXT_FIELDS.map(({ key, label }) => (
-                      <div key={key}>
-                        <label className={labelClass} htmlFor={`v-${key}`}>
-                          {label}
-                        </label>
-                        <input
-                          id={`v-${key}`}
-                          type="text"
-                          value={formData[key] ?? ""}
-                          onChange={(e) =>
-                            update({
-                              [key]: e.target.value,
-                            } as Partial<DistribusiFormValues>)
-                          }
-                          className={fieldClass}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Meta umum Others (muncul untuk semua Others) */}
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div>
-                      <label className={labelClass} htmlFor="tanggalOthers">
-                        Bulan / Tanggal
-                      </label>
-                      <input
-                        id="tanggalOthers"
-                        type="date"
-                        value={formData.tanggal ?? ""}
-                        onChange={(e) => update({ tanggal: e.target.value })}
-                        className={fieldClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass} htmlFor="bayarOthers">
-                        Pembayaran
-                      </label>
-                      <select
-                        id="bayarOthers"
-                        value={formData.pembayaran ?? "Lunas"}
-                        onChange={(e) =>
-                          update({
-                            pembayaran: e.target
-                              .value as DistribusiFormValues["pembayaran"],
-                          })
-                        }
-                        className={fieldClass}
-                      >
-                        <option value="Lunas">Lunas</option>
-                        <option value="Tidak Lunas">Tidak Lunas</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelClass} htmlFor="kodeOthers">
-                        Kode Barang
-                      </label>
-                      <input
-                        id="kodeOthers"
-                        type="text"
-                        value={formData.kodeBarang ?? ""}
-                        onChange={(e) =>
-                          update({ kodeBarang: e.target.value })
-                        }
-                        className={fieldClass}
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        className={labelClass}
-                        htmlFor="arrivalOthers"
-                      >
-                        Arrival Date
-                      </label>
-                      <input
-                        id="arrivalOthers"
-                        type="date"
-                        value={formData.arrivalDate ?? ""}
-                        onChange={(e) =>
-                          update({ arrivalDate: e.target.value })
-                        }
-                        className={fieldClass}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className={labelClass}
-                        htmlFor="stockOwnerOthers"
-                      >
-                        Stock Owner
-                      </label>
-                      <input
-                        id="stockOwnerOthers"
-                        type="text"
-                        value={formData.stockOwner ?? ""}
-                        onChange={(e) =>
-                          update({ stockOwner: e.target.value })
-                        }
-                        className={fieldClass}
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        className={labelClass}
-                        htmlFor="payDateOthers"
-                      >
-                        Payment Date
-                      </label>
-                      <input
-                        id="payDateOthers"
-                        type="date"
-                        value={formData.paymentDate ?? ""}
-                        onChange={(e) =>
-                          update({ paymentDate: e.target.value })
-                        }
-                        className={fieldClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass} htmlFor="nomorBonOthers">
-                        Nomor Bon
-                      </label>
-                      <input
-                        id="nomorBonOthers"
-                        type="text"
-                        value={formData.nomorBon ?? ""}
-                        onChange={(e) => update({ nomorBon: e.target.value })}
-                        className={fieldClass}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className={labelClass} htmlFor="notesOthers">
-                        Notes
-                      </label>
-                      <textarea
-                        id="notesOthers"
-                        rows={2}
-                        value={formData.notes ?? ""}
-                        onChange={(e) => update({ notes: e.target.value })}
-                        className={fieldClass}
-                      />
-                    </div>
-                  </div>
-                </section>
-              </>
-            )}
-
-            {/* Upload Gambar */}
-            <div>
-              <label className={labelClass}>Upload Gambar (Wajib)</label>
-              <div className="flex items-center gap-4">
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/70 bg-background/50 px-5 py-2.5 text-sm font-medium backdrop-blur-sm transition-colors hover:bg-muted/70">
-                  <Upload className="size-4" />
-                  Pilih File
+                <label>
+                  <span className={labelClass}>Stok</span>
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImage}
+                    value={formData.stok}
+                    onChange={(event) => update({ stok: event.target.value })}
+                    placeholder="0"
+                    inputMode="numeric"
+                    type="number"
+                    min={0}
+                    className={fieldClass}
                   />
                 </label>
-                {formData.gambar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={formData.gambar}
-                    alt="Preview"
-                    className="size-14 rounded-xl border border-border/70 object-cover"
-                  />
-                ) : (
-                  <span className="flex size-14 items-center justify-center rounded-xl border border-dashed border-border/70 text-muted-foreground">
-                    <ImagePlus className="size-4" />
-                  </span>
-                )}
-              </div>
-            </div>
 
-            {/* Pesan Error */}
+                <label>
+                  <span className={labelClass}>Standar Price</span>
+                  <input
+                    value={formData.standarPrice ?? ""}
+                    onChange={(event) =>
+                      update({ standarPrice: event.target.value })
+                    }
+                    placeholder="0"
+                    inputMode="numeric"
+                    type="number"
+                    min={0}
+                    className={fieldClass}
+                  />
+                </label>
+
+                <div className="sm:col-span-2">
+                  <ImageField
+                    value={formData.gambar}
+                    onChange={handleImageUpload}
+                    onRemove={() => update({ gambar: "" })}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label>
+                  <span className={labelClass}>Supplier</span>
+                  <select
+                    value={formData.supplier}
+                    onChange={(event) =>
+                      update({ supplier: event.target.value })
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="">Pilih supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.name} value={supplier.name}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span className={labelClass}>Pilih / Ketik Jenis</span>
+                  <input
+                    list="others-categories"
+                    value={formData.subKategori ?? ""}
+                    onChange={(event) =>
+                      update({ subKategori: event.target.value })
+                    }
+                    placeholder="Ketik jenis baru..."
+                    className={fieldClass}
+                  />
+                  <datalist id="others-categories">
+                    {categories.map((category) => (
+                      <option key={category} value={category} />
+                    ))}
+                  </datalist>
+                  <span className="mt-1 block text-[10px] text-muted-foreground">
+                    Ketik bebas untuk menambah kategori baru.
+                  </span>
+                </label>
+
+                {isVelg ? (
+                  <>
+                    <label>
+                      <span className={labelClass}>Merek Produk</span>
+                      <input
+                        value={formData.merekProduk ?? ""}
+                        onChange={(event) =>
+                          update({ merekProduk: event.target.value })
+                        }
+                        placeholder="SSW"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Type Velg</span>
+                      <input
+                        value={formData.typeVelg ?? ""}
+                        onChange={(event) =>
+                          update({ typeVelg: event.target.value })
+                        }
+                        placeholder="S280"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Ring</span>
+                      <select
+                        value={formData.ring ?? ""}
+                        onChange={(event) =>
+                          update({ ring: event.target.value })
+                        }
+                        className={fieldClass}
+                      >
+                        <option value="">Pilih ring</option>
+                        {BAN_RING_OPTIONS.map((ring) => (
+                          <option key={ring} value={ring}>
+                            {ring}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Wide</span>
+                      <input
+                        value={formData.wide ?? ""}
+                        onChange={(event) =>
+                          update({ wide: event.target.value })
+                        }
+                        placeholder="9,5"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Hole</span>
+                      <input
+                        value={formData.hole ?? ""}
+                        onChange={(event) =>
+                          update({ hole: event.target.value })
+                        }
+                        placeholder="6x139.7"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>ET</span>
+                      <input
+                        value={formData.et ?? ""}
+                        onChange={(event) => update({ et: event.target.value })}
+                        placeholder="25"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Colour</span>
+                      <input
+                        value={formData.colour ?? ""}
+                        onChange={(event) =>
+                          update({ colour: event.target.value })
+                        }
+                        placeholder="BMC"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Nobes</span>
+                      <input
+                        value={formData.nobes ?? ""}
+                        onChange={(event) =>
+                          update({ nobes: event.target.value })
+                        }
+                        placeholder="Nomor besi"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Stok</span>
+                      <input
+                        value={formData.stok}
+                        onChange={(event) =>
+                          update({ stok: event.target.value })
+                        }
+                        placeholder="0"
+                        inputMode="numeric"
+                        type="number"
+                        min={0}
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Standar Price</span>
+                      <input
+                        value={formData.standarPrice ?? ""}
+                        onChange={(event) =>
+                          update({ standarPrice: event.target.value })
+                        }
+                        placeholder="0"
+                        inputMode="numeric"
+                        type="number"
+                        min={0}
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Standar Price</span>
+                      <input
+                        value={formData.standarPrice ?? ""}
+                        onChange={(event) =>
+                          update({ standarPrice: event.target.value })
+                        }
+                        placeholder="0"
+                        inputMode="numeric"
+                        type="number"
+                        min={0}
+                        className={fieldClass}
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label>
+                      <span className={labelClass}>Merek Produk</span>
+                      <input
+                        value={formData.merekProduk ?? ""}
+                        onChange={(event) =>
+                          update({ merekProduk: event.target.value })
+                        }
+                        placeholder="KYB"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label>
+                      <span className={labelClass}>Stok</span>
+                      <input
+                        value={formData.stok}
+                        onChange={(event) =>
+                          update({ stok: event.target.value })
+                        }
+                        placeholder="0"
+                        inputMode="numeric"
+                        type="number"
+                        min={0}
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label className="sm:col-span-2">
+                      <span className={labelClass}>Keterangan</span>
+                      <input
+                        value={formData.keterangan ?? ""}
+                        onChange={(event) =>
+                          update({ keterangan: event.target.value })
+                        }
+                        placeholder="Shock Absorber Belakang"
+                        className={fieldClass}
+                      />
+                    </label>
+
+                    <label className="sm:col-span-2">
+                      <span className={labelClass}>Notes</span>
+                      <textarea
+                        value={formData.notes ?? ""}
+                        onChange={(event) =>
+                          update({ notes: event.target.value })
+                        }
+                        placeholder="Catatan tambahan (opsional)"
+                        rows={3}
+                        className={`${fieldClass} resize-none`}
+                      />
+                    </label>
+                  </>
+                )}
+
+                <div className="sm:col-span-2">
+                  <ImageField
+                    value={formData.gambar}
+                    onChange={handleImageUpload}
+                    onRemove={() => update({ gambar: "" })}
+                  />
+                </div>
+              </div>
+            )}
+
             {error && (
-              <p className="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm font-medium text-danger">
+              <p className="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-xs font-medium text-danger">
                 {error}
               </p>
             )}
           </div>
 
-          {/* Footer Modal */}
-          <div className="relative flex items-center justify-between gap-3 border-t border-border/60 bg-background/30 px-6 py-4 backdrop-blur-sm sm:px-8">
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              Data hanya tersimpan di sesi ini (frontend).
+          <div className="flex flex-col-reverse gap-2 border-t border-border bg-muted/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <p className="text-[11px] text-muted-foreground">
+              Field bertanda wajib harus lengkap sebelum disimpan.
             </p>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-border/70 bg-background/50 px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 <Check className="size-4" />
-                {initialData ? "Simpan Perubahan" : "Daftarkan Barang"}
+                {initialData ? "Simpan Perubahan" : "Daftarkan Produk"}
               </button>
             </div>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function ImageField({
+  value,
+  onChange,
+  onRemove,
+}: {
+  value: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div>
+      <span className={labelClass}>Upload Gambar</span>
+      <div className="flex flex-wrap items-center gap-3">
+        {value ? (
+          <div className="relative size-20 overflow-hidden rounded-xl border border-border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={value}
+              alt="Preview produk"
+              className="h-full w-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label="Hapus gambar"
+              className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-lg bg-black/60 text-white"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : null}
+
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-background/60 px-4 py-3 text-xs font-semibold transition-colors hover:border-primary/50 hover:bg-primary-soft/40">
+          <ImagePlus className="size-4 text-primary" />
+          {value ? "Ganti Gambar" : "Pilih Gambar"}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={onChange}
+            className="hidden"
+          />
+        </label>
+        <p className="text-[11px] text-muted-foreground">
+          JPG/PNG, maksimal 2MB.
+        </p>
       </div>
     </div>
   );

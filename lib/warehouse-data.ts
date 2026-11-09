@@ -104,8 +104,9 @@ export interface DiscountRecord {
   id: string;
   code: string;
   store: string;
+  discountPercent: number;
+  maxCut: number;
   limit: number;
-  type: "Discount" | "Voucher";
   fromDate: string;
   toDate: string;
   status: "Aktif" | "Tidak Aktif";
@@ -118,8 +119,9 @@ export const discounts: DiscountRecord[] = [
     id: "DSC-001",
     code: "KKW01",
     store: "WheelsKopi Pusat",
+    discountPercent: 10,
+    maxCut: 150_000,
     limit: 5,
-    type: "Discount",
     fromDate: "2026-10-05",
     toDate: "2026-12-10",
     status: "Aktif",
@@ -130,8 +132,9 @@ export const discounts: DiscountRecord[] = [
     id: "DSC-002",
     code: "KKW02",
     store: "WheelsKopi Binjai",
+    discountPercent: 15,
+    maxCut: 200_000,
     limit: 10,
-    type: "Voucher",
     fromDate: "2026-10-01",
     toDate: "2026-11-30",
     status: "Aktif",
@@ -142,8 +145,9 @@ export const discounts: DiscountRecord[] = [
     id: "DSC-003",
     code: "KKW03",
     store: "WheelsKopi Deli Serdang",
+    discountPercent: 20,
+    maxCut: 100_000,
     limit: 3,
-    type: "Discount",
     fromDate: "2026-08-01",
     toDate: "2026-09-30",
     status: "Tidak Aktif",

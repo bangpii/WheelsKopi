@@ -1,15 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, Suspense } from "react";
 import type { ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Box,
   Disc3,
+  Eye,
   FileSpreadsheet,
   FileText,
-  Package,
   Plus,
   Search,
   Trash2,
@@ -17,10 +16,10 @@ import {
   Upload,
   X,
   Pencil,
-  BarChart3,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RegisterProductModal } from "@/components/distribusi/register-product-modal";
+import { ProductDetailModal } from "@/components/distribusi/product-detail-modal";
 import { rupiah } from "@/lib/dashboard-data";
 import {
   useData,
@@ -32,7 +31,7 @@ import type {
   DistribusiFormValues,
 } from "@/lib/distribusi-data";
 // IMPORT DIPERBAIKI: Hapus getStockStatusInfo
-import { formToItem } from "@/lib/distribusi-data";
+import { formToItem, othersCategories } from "@/lib/distribusi-data";
 
 const statusOptions = ["Semua Status Stok", "Tersedia", "Menipis", "Wajib Pesan"];
 
@@ -42,6 +41,60 @@ function statusOf(stok: number) {
   if (stok <= 5) return "Menipis";
   return "Tersedia";
 }
+
+function specOf(item: Product) {
+  if (item.kategori === "Ban") {
+    return [
+      item.ukuranTapak && item.ukuranTinggi
+        ? `${item.ukuranTapak}/${item.ukuranTinggi}`
+        : item.ukuranTapak || item.ukuranTinggi,
+      item.ring,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (item.subKategori === "Velg") {
+    return [
+      item.typeVelg,
+      item.ring,
+      item.wide,
+      item.hole,
+      item.et ? `ET ${item.et}` : "",
+      item.colour,
+      item.nobes,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+  }
+
+  return item.keterangan || item.ukuran || "-";
+}
+
+function money(value?: number) {
+  return value ? rupiah.format(value) : "-";
+}
+
+interface DetailColumn {
+  label: string;
+  value: (item: Product) => string;
+  align?: "left" | "right" | "center";
+}
+
+const detailColumns: DetailColumn[] = [
+  { label: "Kode", value: (item) => item.kodeBarang || item.id },
+  { label: "Nama Barang", value: (item) => item.namaBarang },
+  { label: "Supplier", value: (item) => item.supplier || "-" },
+  { label: "Spesifikasi", value: specOf },
+  { label: "Stok", value: (item) => String(item.stok), align: "right" },
+  { label: "Status", value: (item) => statusOf(item.stok), align: "center" },
+  { label: "Modal Asli", value: (item) => money(item.hargaModalAsli), align: "right" },
+  { label: "Harga Toko", value: (item) => money(item.hargaModalToko), align: "right" },
+  { label: "Standar Price", value: (item) => money(item.standarPrice), align: "right" },
+  { label: "Arrival Date", value: (item) => item.arrivalDate || "-" },
+  { label: "Stock Owner", value: (item) => item.stockOwner || "-" },
+  { label: "Notes", value: (item) => item.notes || "-" },
+];
 
 function escapeHtml(s: string): string {
   return s
@@ -61,9 +114,30 @@ function DistribusiContent() {
   const [category, setCategory] = useState<DistribusiCategory>(initialTab);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Semua Status Stok");
+  const [subCategory, setSubCategory] = useState("Semua");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [otherCategories, setOtherCategories] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [...othersCategories];
+
+    try {
+      const stored = window.localStorage.getItem("wheelskopi-other-categories");
+      const parsed = stored ? (JSON.parse(stored) as string[]) : [];
+
+      return Array.from(
+        new Set([
+          ...othersCategories,
+          ...(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []),
+        ]),
+      );
+    } catch {
+      return [...othersCategories];
+    }
+  });
   
   const [registerOpen, setRegisterOpen] = useState(false);
   const [editItem, setEditItem] = useState<Product | null>(null);
+  const [detailItem, setDetailItem] = useState<Product | null>(null);
   
   const [notice, setNotice] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -72,6 +146,18 @@ function DistribusiContent() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const custom = otherCategories.filter(
+      (item) => !(othersCategories as readonly string[]).includes(item),
+    );
+    window.localStorage.setItem(
+      "wheelskopi-other-categories",
+      JSON.stringify(custom),
+    );
+  }, [mounted, otherCategories]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -109,15 +195,57 @@ function DistribusiContent() {
     // GUNAKAN FUNGSI STATIS
     const computedStatus = statusOf(item.stok);
     const matchStatus = status === "Semua Status Stok" || computedStatus === status;
+    const matchSubCategory =
+      category !== "Others" ||
+      subCategory === "Semua" ||
+      item.subKategori === subCategory;
 
-    return matchSearch && matchStatus;
+    return matchSearch && matchStatus && matchSubCategory;
   });
 
   const handleRegister = (values: DistribusiFormValues) => {
     if (editItem) {
       const updatedItem = formToItem(editItem.id, values);
-      const updatedProduct = { ...editItem, ...updatedItem };
-      
+      const updatedProduct: Product = {
+        ...editItem,
+        ...updatedItem,
+        kategoriUtama: values.kategori,
+        // Pertahankan data lama yang tidak lagi ditampilkan di form.
+        hargaModalAsli: editItem.hargaModalAsli,
+        hargaModalToko: editItem.hargaModalToko,
+        hargaTagihanToko:
+          updatedItem.hargaTagihanToko ?? editItem.hargaTagihanToko,
+        tanggal: editItem.tanggal,
+        pembayaran: editItem.pembayaran,
+        jenisBarang: editItem.jenisBarang,
+        owner: editItem.owner,
+        paymentDate: editItem.paymentDate,
+        nomorBon: editItem.nomorBon,
+        kodeBarang: editItem.kodeBarang,
+        gtySet: editItem.gtySet,
+        discount: editItem.discount,
+        dealerPrice: editItem.dealerPrice,
+        dprice: editItem.dprice,
+        discountType: editItem.discountType,
+        rawPrice: editItem.rawPrice,
+        sswDisc: editItem.sswDisc,
+        sswDisc2: editItem.sswDisc2,
+        rawPriceAfterDisc: editItem.rawPriceAfterDisc,
+        shippingFee: editItem.shippingFee,
+        shippingPerSet: editItem.shippingPerSet,
+        subTotalModalTP: editItem.subTotalModalTP,
+        modal1Set: editItem.modal1Set,
+        paymentTipe: editItem.paymentTipe,
+        up: editItem.up,
+        modalToko: editItem.modalToko,
+        arrivalDate: editItem.arrivalDate,
+        stockOwner: editItem.stockOwner,
+        history: [
+          ...editItem.history,
+          `[${new Date().toLocaleString("id-ID")}] Diperbarui dari Distribusi`,
+        ],
+      };
+
       setProducts((prev) =>
         prev.map((p) => (p.id === editItem.id ? updatedProduct : p))
       );
@@ -130,8 +258,37 @@ function DistribusiContent() {
       setProducts((prev) => [newProduct, ...prev]);
       setNotice(`Produk "${newProduct.namaBarang}" berhasil didaftarkan.`);
     }
+
+    if (values.kategori === "Others" && values.subKategori) {
+      setIsAddingCategory(false);
+      setSubCategory(values.subKategori);
+      setOtherCategories((prev) =>
+        prev.some(
+          (item) => item.toLowerCase() === values.subKategori?.toLowerCase(),
+        )
+          ? prev
+          : [...prev, values.subKategori as string],
+      );
+    }
+
     setCategory(values.kategori);
     setRegisterOpen(false);
+  };
+
+  const commitCategory = () => {
+    const name = newCategory.trim();
+    if (!name) return;
+
+    setOtherCategories((prev) =>
+      prev.some((item) => item.toLowerCase() === name.toLowerCase())
+        ? prev
+        : [...prev, name],
+    );
+    setCategory("Others");
+    setSubCategory(name);
+    setNewCategory("");
+    setIsAddingCategory(false);
+    setNotice(`Kategori "${name}" ditambahkan.`);
   };
 
   const handleDelete = (item: Product) => {
@@ -154,33 +311,13 @@ function DistribusiContent() {
       return;
     }
 
-    const header = [
-      "Kode Barang", "Kategori", "Sub Kategori", "Nama Barang", "Supplier",
-      "Spesifikasi", "Merek Ban", "Type Ban", "Item Velg", "GTY (Set)",
-      "Harga Modal Asli", "Harga Tagihan Toko", "Harga Modal Toko",
-      "Modal 1 Set", "Stok", "Status", "Pembayaran", "Tanggal", "Owner",
-      "Payment Date", "Nomor Bon", "Notes",
-    ].join(",");
+    const header = detailColumns.map((column) => column.label).join(",");
 
-    const rows = filteredItems.map((item) => {
-      const spec =
-        item.kategoriUtama === "Ban"
-          ? `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""}${item.ring ? ` ${item.ring}` : ""}`.trim()
-          : `${item.ukuran}${item.ring ? ` ${item.ring}` : ""}`.trim();
-
-      const currentStatus = statusOf(item.stok);
-
-      return [
-        item.id, item.kategoriUtama, item.subKategori, item.namaBarang,
-        item.supplier, spec, item.merekBan ?? "", item.typeBan ?? "",
-        item.item ?? "", item.gtySet ?? "", item.hargaModalAsli,
-        item.hargaTagihanToko ?? "", item.hargaModalToko, item.modal1Set ?? "",
-        item.stok, currentStatus, item.pembayaran ?? "", item.tanggal ?? "", item.owner ?? "",
-        item.paymentDate ?? "", item.nomorBon ?? "", item.notes ?? "",
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(",");
-    });
+    const rows = filteredItems.map((item) =>
+      detailColumns
+        .map((column) => `"${column.value(item).replace(/"/g, '""')}"`)
+        .join(","),
+    );
 
     const csv = `\uFEFF${[header, ...rows].join("\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -208,39 +345,31 @@ function DistribusiContent() {
       return;
     }
 
-    const isBan = category === "Ban";
-
     const rows = filteredItems
-      .map((item) => {
-        const spec = isBan
-          ? `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""}${item.ring ? ` ${item.ring}` : ""}`.trim()
-          : `${item.ukuran}${item.ring ? ` ${item.ring}` : ""}`.trim();
-
-        return `
-          <tr>
-            <td>${escapeHtml(item.id)}</td>
-            <td>${escapeHtml(item.namaBarang)}</td>
-            <td>${escapeHtml(item.supplier || "-")}</td>
-            <td>${escapeHtml(spec || "-")}</td>
-            <td>${item.hargaModalAsli.toLocaleString("id-ID")}</td>
-            <td>${item.hargaTagihanToko?.toLocaleString("id-ID") ?? "-"}</td>
-            <td>${item.hargaModalToko.toLocaleString("id-ID")}</td>
-            <td>${item.stok}</td>
-          </tr>`;
-      })
+      .map(
+        (item) =>
+          `<tr>${detailColumns
+            .map((column) => `<td>${escapeHtml(column.value(item))}</td>`)
+            .join("")}</tr>`,
+      )
       .join("");
+
+    const tableHead = `<tr>${detailColumns
+      .map((column) => `<th>${escapeHtml(column.label)}</th>`)
+      .join("")}</tr>`;
 
     printWindow.document.write(`
       <html>
         <head>
           <title>Stock List - ${escapeHtml(category)}</title>
           <style>
+            @page { size: landscape; }
             body { font-family: sans-serif; padding: 24px; color: #18141b; }
             h1 { font-size: 20px; margin-bottom: 4px; }
             p { color: #706a76; font-size: 12px; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            th, td { border: 1px solid #d9d5dc; padding: 8px; text-align: left; }
-            th { background: #f5f4f6; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+            table { width: 100%; border-collapse: collapse; font-size: 9px; }
+            th, td { border: 1px solid #d9d5dc; padding: 5px 6px; text-align: left; white-space: nowrap; }
+            th { background: #f5f4f6; text-transform: uppercase; font-size: 8px; letter-spacing: 0.08em; }
           </style>
         </head>
         <body>
@@ -248,16 +377,7 @@ function DistribusiContent() {
           <p>Dicetak ${new Date().toLocaleString("id-ID")}</p>
           <table>
             <thead>
-              <tr>
-                <th>Kode</th>
-                <th>Nama Barang</th>
-                <th>Supplier</th>
-                <th>Spesifikasi</th>
-                <th>Modal Asli</th>
-                <th>Tagihan Toko</th>
-                <th>Modal Toko</th>
-                <th>Stok</th>
-              </tr>
+              ${tableHead}
             </thead>
             <tbody>${rows}</tbody>
           </table>
@@ -289,17 +409,69 @@ function DistribusiContent() {
       const dataLines = filledLines.slice(1);
 
       const imported: Product[] = dataLines.map((line, index) => {
-        const [
-          namaBarang = "", supplier = "", ukuran = "", ring = "",
-          asli = "0", toko = "0", stok = "0",
-        ] = line.split(",");
+        const cols = line
+          .split(",")
+          .map((value) => value.trim().replace(/^"|"$/g, ""));
+        const id = `IMP-${Date.now().toString().slice(-5)}-${index + 1}`;
 
-        const item = formToItem(`IMP-${Date.now().toString().slice(-5)}-${index + 1}`, {
-          kategori: category,
-          subKategori: category === "Ban" ? "Import" : "Others",
-          namaBarang, ukuran, ring,
-          hargaModalAsli: asli, hargaModalToko: toko, stok,
-          gambar: "", supplier,
+        if (category === "Ban") {
+          const [
+            merekBan = "",
+            typeBan = "",
+            ukuranTapak = "",
+            ukuranTinggi = "",
+            ring = "",
+            supplier = "",
+            stok = "0",
+          ] = cols;
+
+          const item = formToItem(id, {
+            kategori: "Ban",
+            merekBan,
+            typeBan,
+            ukuranTapak,
+            ukuranTinggi,
+            ring,
+            supplier,
+            stok,
+            gambar: "",
+          });
+
+          return toProduct(item, `Diimport dari ${file.name}`);
+        }
+
+        const [
+          subKategori = "Others",
+          merekProduk = "",
+          typeVelg = "",
+          ring = "",
+          wide = "",
+          hole = "",
+          et = "",
+          colour = "",
+          nobes = "",
+          keterangan = "",
+          supplier = "",
+          stok = "0",
+          notes = "",
+        ] = cols;
+
+        const item = formToItem(id, {
+          kategori: "Others",
+          subKategori,
+          merekProduk,
+          typeVelg,
+          ring,
+          wide,
+          hole,
+          et,
+          colour,
+          nobes,
+          keterangan,
+          supplier,
+          stok,
+          notes,
+          gambar: "",
         });
 
         return toProduct(item, `Diimport dari ${file.name}`);
@@ -333,13 +505,6 @@ function DistribusiContent() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/profit"
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-            >
-              <BarChart3 className="size-4 text-primary" />
-              Lihat Profit
-            </Link>
             <button
               type="button"
               onClick={() => {
@@ -354,24 +519,12 @@ function DistribusiContent() {
           </div>
         </header>
 
-        <div className="inline-flex rounded-xl border border-border bg-card p-1 text-sm font-medium">
-          <Link
-            href="/products"
-            className="rounded-lg px-4 py-2 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Product Store
-          </Link>
-          <span className="rounded-lg bg-primary px-4 py-2 text-primary-foreground">
-            Product Distributor
-          </span>
-        </div>
-
         <section className="surface overflow-hidden" aria-label="Stock list distribusi">
           <div className="flex flex-col gap-3 border-b border-border px-4 pt-1 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center">
               <span className="flex items-center gap-2 border-b-2 border-primary px-4 py-3.5 text-sm font-semibold text-primary sm:px-5">
                 <Box className="size-4" />
-                Stock List
+                Product Distributor
               </span>
               <button
                 type="button"
@@ -386,25 +539,97 @@ function DistribusiContent() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 p-1">
-              {(["Ban", "Others"] as const).map((tab) => {
-                const TabIcon = tab === "Ban" ? Disc3 : Box;
-                return (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 p-1">
+                {(["Ban", "Others"] as const).map((tab) => {
+                  const TabIcon = tab === "Ban" ? Disc3 : Box;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setCategory(tab);
+                        setSubCategory("Semua");
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                        category === tab
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <TabIcon className="size-3.5" />
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {mounted && (
+                <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-muted/50 p-1">
                   <button
-                    key={tab}
                     type="button"
-                    onClick={() => setCategory(tab)}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                      category === tab
+                    onClick={() => {
+                      setCategory("Others");
+                      setSubCategory("Semua");
+                    }}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                      category === "Others" && subCategory === "Semua"
                         ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <TabIcon className="size-3.5" />
-                    {tab}
+                    Semua
                   </button>
-                );
-              })}
+                  {otherCategories.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => {
+                        setCategory("Others");
+                        setSubCategory(item);
+                      }}
+                      className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                        category === "Others" && subCategory === item
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                  {isAddingCategory ? (
+                    <input
+                      autoFocus
+                      value={newCategory}
+                      onChange={(event) => setNewCategory(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          commitCategory();
+                        }
+                        if (event.key === "Escape") {
+                          setNewCategory("");
+                          setIsAddingCategory(false);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!newCategory.trim()) setIsAddingCategory(false);
+                      }}
+                      placeholder="Ketik kategori..."
+                      className="w-32 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(true)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-card"
+                    >
+                      <Plus className="size-3" />
+                      Kategori
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -482,31 +707,46 @@ function DistribusiContent() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-250 text-left text-sm">
+            <table className="w-full min-w-[1500px] text-left text-sm">
               <thead className="border-b border-border bg-muted/50 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-4 py-3.5 font-semibold sm:px-6">Kode</th>
-                  <th className="px-4 py-3.5 font-semibold">Nama Barang</th>
-                  <th className="px-4 py-3.5 font-semibold">Supplier</th>
-                  <th className="px-4 py-3.5 font-semibold">Spesifikasi</th>
-                  <th className="px-4 py-3.5 font-semibold">Harga (Modal / Toko)</th>
-                  <th className="px-4 py-3.5 text-right font-semibold">Stok</th>
-                  <th className="px-4 py-3.5 text-center font-semibold">Status</th>
-                  <th className="px-4 py-3.5 text-center font-semibold sm:px-6">Action</th>
+                  {detailColumns.map((column) => (
+                    <th
+                      key={column.label}
+                      className={`whitespace-nowrap px-3 py-3.5 font-semibold ${
+                        column.align === "right"
+                          ? "text-right"
+                          : column.align === "center"
+                            ? "text-center"
+                            : ""
+                      }`}
+                    >
+                      {column.label}
+                    </th>
+                  ))}
+                  <th className="whitespace-nowrap px-3 py-3.5 text-center font-semibold">
+                    Aksi
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
                 {!mounted ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={8} className="px-6 py-3">
+                      <td
+                        colSpan={detailColumns.length + 1}
+                        className="px-6 py-3"
+                      >
                         <div className="h-10 animate-pulse rounded-lg bg-muted/60" />
                       </td>
                     </tr>
                   ))
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-16">
+                    <td
+                      colSpan={detailColumns.length + 1}
+                      className="px-6 py-16"
+                    >
                       <div className="flex flex-col items-center justify-center gap-3 text-center">
                         <span className="flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
                           <Box className="size-6" />
@@ -533,68 +773,117 @@ function DistribusiContent() {
                   </tr>
                 ) : (
                   filteredItems.map((item) => {
-                    // GUNAKAN FUNGSI STATIS
                     const stockStatus = statusOf(item.stok);
-
                     const statusClass =
                       stockStatus === "Wajib Pesan"
                         ? "bg-danger-soft text-danger"
                         : stockStatus === "Menipis"
                           ? "bg-warning-soft text-warning"
                           : "bg-success-soft text-success";
-
-                    const spec =
-                      item.kategoriUtama === "Ban"
-                        ? `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""} ${item.ring ? ` ${item.ring}` : ""}`.trim()
-                        : `${item.ukuran ?? ""} ${item.ring ? ` ${item.ring}` : ""}`.trim();
+                    const initials = (
+                      item.merekBan ||
+                      item.merekProduk ||
+                      item.subKategori ||
+                      "?"
+                    )
+                      .slice(0, 3)
+                      .toUpperCase();
 
                     return (
                       <tr key={item.id} className="group transition-colors hover:bg-muted/40">
-                        <td className="px-4 py-3.5 font-mono text-xs font-medium text-muted-foreground sm:px-6">
-                          {item.id}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-[10px] font-semibold text-primary">
-                              {item.subKategori.slice(0, 3).toUpperCase()}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate font-medium">{item.namaBarang}</p>
-                              <p className="truncate text-[11px] text-muted-foreground">
-                                {item.subKategori}
-                                {item.merekBan ? ` • ${item.merekBan} ${item.typeBan ?? ""}` : ""}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                          {item.supplier || "-"}
-                        </td>
-                        <td className="px-4 py-3.5 text-muted-foreground">
-                          {spec || "-"}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <p className="font-mono text-xs text-muted-foreground tabular-nums">
-                              M: {rupiah.format(item.hargaModalAsli)}
-                            </p>
-                            <span className="text-muted-foreground/30">|</span>
-                            <p className="font-mono text-sm font-semibold text-primary tabular-nums">
-                              T: {rupiah.format(item.hargaModalToko)}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-right font-mono font-semibold tabular-nums">
-                          {item.stok}
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
-                            {stockStatus === "Wajib Pesan" && <TriangleAlert className="size-3.5" />}
-                            {stockStatus}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 sm:px-6">
+                        {detailColumns.map((column) => {
+                          const value = column.value(item);
+                          const alignClass =
+                            column.align === "right"
+                              ? "text-right font-mono tabular-nums"
+                              : column.align === "center"
+                                ? "text-center"
+                                : "";
+
+                          if (column.label === "Nama Barang") {
+                            return (
+                              <td key={column.label} className="px-3 py-3.5">
+                                <div className="flex min-w-56 items-center gap-3">
+                                  {item.gambar ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={item.gambar}
+                                      alt={item.namaBarang}
+                                      className="size-10 shrink-0 rounded-xl border border-border object-cover"
+                                    />
+                                  ) : (
+                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-[10px] font-semibold text-primary">
+                                      {initials}
+                                    </span>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="max-w-56 truncate font-medium">
+                                      {item.namaBarang}
+                                    </p>
+                                    <p className="truncate text-[11px] text-muted-foreground">
+                                      {item.subKategori}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          }
+
+                          if (column.label === "Stok") {
+                            return (
+                              <td
+                                key={column.label}
+                                className="px-3 py-3.5 text-right"
+                              >
+                                <span
+                                  className={`inline-flex min-w-10 justify-center rounded-full px-2.5 py-1 font-mono text-xs font-semibold tabular-nums ${statusClass}`}
+                                >
+                                  {item.stok}
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          if (column.label === "Status") {
+                            return (
+                              <td
+                                key={column.label}
+                                className="px-3 py-3.5 text-center"
+                              >
+                                <span
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}
+                                >
+                                  {stockStatus === "Wajib Pesan" && (
+                                    <TriangleAlert className="size-3.5" />
+                                  )}
+                                  {stockStatus}
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          return (
+                            <td
+                              key={column.label}
+                              className={`whitespace-nowrap px-3 py-3.5 text-xs ${alignClass} ${
+                                column.label === "Kode"
+                                  ? "font-mono text-muted-foreground"
+                                  : ""
+                              }`}
+                            >
+                              {value}
+                            </td>
+                          );
+                        })}
+                        <td className="px-3 py-3.5">
                           <div className="flex justify-center gap-1">
+                            <button
+                              onClick={() => setDetailItem(item)}
+                              className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              title="Lihat Detail Produk"
+                            >
+                              <Eye className="size-4" />
+                            </button>
                             <button
                               onClick={() => openEdit(item)}
                               className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
@@ -635,12 +924,25 @@ function DistribusiContent() {
       {registerOpen && (
         <RegisterProductModal
           suppliers={supplierOptions}
+          categories={otherCategories}
+          initialSubKategori={
+            category === "Others" && subCategory !== "Semua"
+              ? subCategory
+              : undefined
+          }
           initialData={editItem}
           onClose={() => {
             setRegisterOpen(false);
             setEditItem(null);
           }}
           onSubmit={handleRegister}
+        />
+      )}
+
+      {detailItem && (
+        <ProductDetailModal
+          item={detailItem}
+          onClose={() => setDetailItem(null)}
         />
       )}
     </AppShell>

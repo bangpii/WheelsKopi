@@ -1,17 +1,74 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Filter } from "lucide-react";
-import { rupiah, stockItems } from "@/lib/dashboard-data";
+import { rupiah } from "@/lib/dashboard-data";
+import { getDynamicMinStock } from "@/lib/analytics-data";
+import { useData } from "@/lib/context/data-context";
+import { filterTransactions } from "@/lib/dashboard-filter";
 
-const filters = ["Semua", "Mobil", "Velg", "Aksesori"];
+interface StockTableProps {
+  startDate?: string;
+  endDate?: string;
+}
 
-export function StockTable() {
+const filters = ["Semua", "Ban", "Velg", "Aksesori"];
+
+export function StockTable({ startDate, endDate }: StockTableProps) {
+  const { products, transactions } = useData();
   const [activeFilter, setActiveFilter] = useState("Semua");
 
-  const filtered = stockItems.filter(
-    (item) => activeFilter === "Semua" || item.category === activeFilter,
+  const filteredTransactions = filterTransactions(
+    transactions,
+    startDate,
+    endDate,
   );
+  const soldByProduct = new Map<string, number>();
+
+  for (const trx of filteredTransactions) {
+    for (const line of trx.lines ?? []) {
+      soldByProduct.set(
+        line.productId,
+        (soldByProduct.get(line.productId) ?? 0) + line.qty,
+      );
+    }
+  }
+
+  const rows = products
+    .map((product) => {
+      const isBan = product.kategoriUtama === "Ban";
+      const category = isBan
+        ? "Ban"
+        : product.subKategori === "Velg"
+          ? "Velg"
+          : "Aksesori";
+      const size = isBan
+        ? [
+            product.ukuranTapak && product.ukuranTinggi
+              ? `${product.ukuranTapak}/${product.ukuranTinggi}`
+              : product.ukuran,
+            product.ring,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        : [product.ring, product.wide].filter(Boolean).join(" ");
+
+      return {
+        id: product.id,
+        name: product.namaBarang,
+        brand:
+          product.merekBan || product.merekProduk || product.subKategori || "-",
+        size: size || "-",
+        category,
+        price: product.hargaModalToko || 0,
+        stock: product.stok || 0,
+        minStock: getDynamicMinStock(product.id),
+        sold: soldByProduct.get(product.id) ?? 0,
+        href: `/distribusi?tab=${isBan ? "ban" : "others"}`,
+      };
+    })
+    .filter((row) => activeFilter === "Semua" || row.category === activeFilter);
 
   return (
     <section
@@ -45,20 +102,20 @@ export function StockTable() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
+          <Link
+            href="/stock-list"
             className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted/60"
           >
             <Filter className="size-4" />
-            Filter
-          </button>
-          <button
-            type="button"
+            Stock List
+          </Link>
+          <Link
+            href="/distribusi"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
           >
             Tambah Item
             <ArrowUpRight className="size-3.5" />
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -96,72 +153,89 @@ export function StockTable() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item) => {
-              const low = item.stock <= item.minStock;
-              const out = item.stock <= 0;
-
-              return (
-                <tr
-                  key={item.id}
-                  className="group border-b border-border/70 transition-colors hover:bg-muted/40"
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={9}
+                  className="px-6 py-12 text-center text-sm text-muted-foreground"
                 >
-                  <td className="px-5 py-3 font-mono text-xs font-medium tabular-nums sm:px-6">
-                    {item.id}
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 font-display text-[10px] font-semibold text-primary">
-                        {item.brand.slice(0, 3).toUpperCase()}
+                  Belum ada produk pada filter ini.
+                </td>
+              </tr>
+            ) : (
+              rows.map((item) => {
+                const low = item.stock <= item.minStock;
+                const out = item.stock <= 0;
+
+                return (
+                  <tr
+                    key={item.id}
+                    className="group border-b border-border/70 transition-colors hover:bg-muted/40"
+                  >
+                    <td className="px-5 py-3 font-mono text-xs font-medium tabular-nums sm:px-6">
+                      {item.id}
+                    </td>
+                    <td className="px-3 py-3">
+                      <Link href={item.href} className="flex items-center gap-3">
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 font-display text-[10px] font-semibold text-primary">
+                          {item.brand.slice(0, 3).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium group-hover:text-primary">
+                            {item.name}
+                          </p>
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {item.brand}
+                          </p>
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {item.size}
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                        {item.category}
                       </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{item.name}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">
-                          {item.brand}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">
-                    {item.size}
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono tabular-nums">
-                    {rupiah.format(item.price)}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <span
-                      className={`font-mono tabular-nums ${out ? "text-danger" : low ? "text-warning" : ""}`}
-                    >
-                      {item.stock}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                    {item.minStock}
-                  </td>
-                  <td className="px-3 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                    {item.sold}
-                  </td>
-                  <td className="px-5 py-3 text-right sm:px-6">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        out
-                          ? "bg-danger-soft text-danger"
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono tabular-nums">
+                      {item.price > 0 ? rupiah.format(item.price) : "-"}
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span
+                        className={`font-mono tabular-nums ${out ? "text-danger" : low ? "text-warning" : ""}`}
+                      >
+                        {item.stock}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                      {item.minStock}
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                      {item.sold}
+                    </td>
+                    <td className="px-5 py-3 text-right sm:px-6">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          out
+                            ? "bg-danger-soft text-danger"
+                            : low
+                              ? "bg-warning-soft text-warning"
+                              : "bg-success-soft text-success"
+                        }`}
+                      >
+                        {out && <AlertTriangle className="size-3.5" />}
+                        {out
+                          ? "Stok Habis"
                           : low
-                            ? "bg-warning-soft text-warning"
-                            : "bg-success-soft text-success"
-                      }`}
-                    >
-                      {out && <AlertTriangle className="size-3.5" />}
-                      {out ? "Stok Habis" : low ? "Segera Restock" : "Aman"}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
+                            ? "Segera Restock"
+                            : "Aman"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

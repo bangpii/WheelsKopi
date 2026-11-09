@@ -100,7 +100,7 @@ export default function ProfitPage() {
 
   return (
     <AppShell>
-      <div className="w-full max-w-6xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         {/* Header */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -160,7 +160,7 @@ export default function ProfitPage() {
                 type="date"
                 value={draftStartDate}
                 onChange={(e) => setDraftStartDate(e.target.value)}
-                className="bg-transparent text-xs outline-none text-foreground cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                className="h-7 bg-transparent px-0.5 text-xs outline-none text-foreground cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
                 title="Tanggal Mulai"
               />
             </div>
@@ -170,7 +170,7 @@ export default function ProfitPage() {
                 type="date"
                 value={draftEndDate}
                 onChange={(e) => setDraftEndDate(e.target.value)}
-                className="bg-transparent text-xs outline-none text-foreground cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                className="h-7 bg-transparent px-0.5 text-xs outline-none text-foreground cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
                 title="Tanggal Selesai"
               />
             </div>

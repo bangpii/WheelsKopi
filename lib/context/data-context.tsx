@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type {
   Customer,
@@ -20,10 +28,15 @@ import {
   rolePermissions as defaultPermissions,
   roles as defaultRoles,
   suppliers as seededSuppliers,
+  users as seededUsers,
 } from "@/lib/master-data";
-import type { RolePermission, SupplierRecord } from "@/lib/master-data";
+import type {
+  RolePermission,
+  SupplierRecord,
+  UserRecord,
+} from "@/lib/master-data";
 
-export type { RolePermission, SupplierRecord } from "@/lib/master-data";
+export type { RolePermission, SupplierRecord, UserRecord } from "@/lib/master-data";
 export type { DistribusiItem } from "@/lib/distribusi-data";
 
 /* ------------------------------------------------------------------ */
@@ -50,6 +63,7 @@ interface GlobalData {
   products: Product[];
   roles: string[];
   rolePermissions: RolePermission[];
+  users: UserRecord[];
 
   setStockItems: Dispatch<SetStateAction<StockItem[]>>;
   setTransactions: Dispatch<SetStateAction<Transaction[]>>;
@@ -59,6 +73,7 @@ interface GlobalData {
   setProducts: Dispatch<SetStateAction<Product[]>>;
   setRoles: Dispatch<SetStateAction<string[]>>;
   setRolePermissions: Dispatch<SetStateAction<RolePermission[]>>;
+  setUsers: Dispatch<SetStateAction<UserRecord[]>>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,14 +118,15 @@ const seededProducts: Product[] = initialDistribusiItems.map((item) =>
 /* ------------------------------------------------------------------ */
 
 const STORAGE_KEYS = {
-  stocks: "wheelskopi_v2_stocks",
-  transactions: "wheelskopi_v2_transactions",
-  kpis: "wheelskopi_v2_kpis",
-  customers: "wheelskopi_v2_customers",
+  stocks: "wheelskopi_v3_stocks",
+  transactions: "wheelskopi_v3_transactions",
+  kpis: "wheelskopi_v3_kpis",
+  customers: "wheelskopi_v3_customers",
   suppliers: "wheelskopi_v2_suppliers",
   products: "wheelskopi_v2_products",
   roles: "wheelskopi_v2_roles",
   permissions: "wheelskopi_v2_permissions",
+  users: "wheelskopi_v2_users",
 } as const;
 
 function readStored<T>(key: string, fallback: T): T {
@@ -126,6 +142,45 @@ function readStored<T>(key: string, fallback: T): T {
   }
 }
 
+const subscribeToClient = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+/**
+ * State yang membaca localStorage setelah hydration selesai. Render pertama
+ * memakai fallback yang sama dengan server agar tidak memicu hydration mismatch.
+ */
+function usePersistentCollection<T>(
+  key: string,
+  fallback: T,
+): [T, Dispatch<SetStateAction<T>>, boolean] {
+  const isClient = useSyncExternalStore(
+    subscribeToClient,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+  const stored = useMemo(
+    () => (isClient ? readStored(key, fallback) : fallback),
+    [fallback, isClient, key],
+  );
+  const [override, setOverride] = useState<T | null>(null);
+  const value = override ?? stored;
+
+  const setValue = useCallback<Dispatch<SetStateAction<T>>>(
+    (action) => {
+      setOverride((current) => {
+        const base = current ?? stored;
+        return typeof action === "function"
+          ? (action as (previous: T) => T)(base)
+          : action;
+      });
+    },
+    [stored],
+  );
+
+  return [value, setValue, isClient];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Context & Provider                                                */
 /* ------------------------------------------------------------------ */
@@ -133,69 +188,101 @@ function readStored<T>(key: string, fallback: T): T {
 const DataContext = createContext<GlobalData | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [stockItems, setStockItems] = useState<StockItem[]>(() =>
-    readStored(STORAGE_KEYS.stocks, demoStocks),
+  const [stockItems, setStockItems, clientStocks] = usePersistentCollection(
+    STORAGE_KEYS.stocks,
+    demoStocks,
   );
-  const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    readStored(STORAGE_KEYS.transactions, demoTransactions),
+  const [transactions, setTransactions, clientTransactions] =
+    usePersistentCollection(STORAGE_KEYS.transactions, demoTransactions);
+  const [kpis, setKpis, clientKpis] = usePersistentCollection(
+    STORAGE_KEYS.kpis,
+    demoKpis,
   );
-  const [kpis, setKpis] = useState<Kpi[]>(() =>
-    readStored(STORAGE_KEYS.kpis, demoKpis),
+  const [customers, setCustomers, clientCustomers] = usePersistentCollection(
+    STORAGE_KEYS.customers,
+    demoCustomers,
   );
-  const [customers, setCustomers] = useState<Customer[]>(() =>
-    readStored(STORAGE_KEYS.customers, demoCustomers),
+  const [suppliers, setSuppliers, clientSuppliers] = usePersistentCollection(
+    STORAGE_KEYS.suppliers,
+    seededSuppliers,
   );
-  const [suppliers, setSuppliers] = useState<SupplierRecord[]>(() =>
-    readStored(STORAGE_KEYS.suppliers, seededSuppliers),
+  const [products, setProducts, clientProducts] = usePersistentCollection(
+    STORAGE_KEYS.products,
+    seededProducts,
   );
-  const [products, setProducts] = useState<Product[]>(() =>
-    readStored(STORAGE_KEYS.products, seededProducts),
+  const [roles, setRoles, clientRoles] = usePersistentCollection(
+    STORAGE_KEYS.roles,
+    defaultRoles,
   );
-  const [roles, setRoles] = useState<string[]>(() =>
-    readStored(STORAGE_KEYS.roles, defaultRoles),
+  const [rolePermissions, setRolePermissions, clientPermissions] =
+    usePersistentCollection(STORAGE_KEYS.permissions, defaultPermissions);
+  const [users, setUsers, clientUsers] = usePersistentCollection(
+    STORAGE_KEYS.users,
+    seededUsers,
   );
-  const [rolePermissions, setRolePermissions] = useState<RolePermission[]>(
-    () => readStored(STORAGE_KEYS.permissions, defaultPermissions),
-  );
+
+  const hydrated =
+    clientStocks &&
+    clientTransactions &&
+    clientKpis &&
+    clientCustomers &&
+    clientSuppliers &&
+    clientProducts &&
+    clientRoles &&
+    clientPermissions &&
+    clientUsers;
 
   /* Persist ke localStorage */
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.stocks, JSON.stringify(stockItems));
-  }, [stockItems]);
+  }, [hydrated, stockItems]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(
       STORAGE_KEYS.transactions,
       JSON.stringify(transactions),
     );
-  }, [transactions]);
+  }, [hydrated, transactions]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.kpis, JSON.stringify(kpis));
-  }, [kpis]);
+  }, [hydrated, kpis]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(customers));
-  }, [customers]);
+  }, [customers, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.suppliers, JSON.stringify(suppliers));
-  }, [suppliers]);
+  }, [hydrated, suppliers]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
-  }, [products]);
+  }, [hydrated, products]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.roles, JSON.stringify(roles));
-  }, [roles]);
+  }, [hydrated, roles]);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(
       STORAGE_KEYS.permissions,
       JSON.stringify(rolePermissions),
     );
-  }, [rolePermissions]);
+  }, [hydrated, rolePermissions]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
+  }, [hydrated, users]);
 
   return (
     <DataContext.Provider
@@ -216,6 +303,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setRoles,
         rolePermissions,
         setRolePermissions,
+        users,
+        setUsers,
       }}
     >
       {children}

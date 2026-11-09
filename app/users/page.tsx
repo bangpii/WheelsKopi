@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import {
   Plus,
   Edit,
@@ -14,42 +14,8 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
-import { stores, users as demoUsers } from "@/lib/master-data";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  username: string;
-  password?: string;
-  role: string;
-  phone: string;
-  store: string;
-  fotoKtp: string;
-  status: "Aktif" | "Nonaktif";
-}
-
-const subscribeToMount = () => () => {};
-
-function readStoredUsers(): User[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const savedUsers = localStorage.getItem("wheelskopi_v2_users");
-
-  if (!savedUsers) {
-    return demoUsers;
-  }
-
-  try {
-    return JSON.parse(savedUsers);
-  } catch (error) {
-    console.error("Gagal parse data user", error);
-
-    return [];
-  }
-}
+import { stores } from "@/lib/master-data";
+import type { UserRecord as User } from "@/lib/master-data";
 
 interface UserFormData {
   name: string;
@@ -61,18 +27,13 @@ interface UserFormData {
   store: string;
   fotoKtp: string;
   status: "Aktif" | "Nonaktif";
+  gajiPokok: string;
+  periodeGaji: "Mingguan" | "Bulanan";
+  hariGajian: string;
 }
 
 export default function UsersPage() {
-  const { roles, setRoles } = useData();
-
-  const isMounted = useSyncExternalStore(
-    subscribeToMount,
-    () => true,
-    () => false,
-  );
-
-  const [users, setUsers] = useState<User[]>(readStoredUsers);
+  const { roles, setRoles, users, setUsers } = useData();
   const [search, setSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,23 +49,13 @@ export default function UsersPage() {
     store: stores[0].storeName,
     fotoKtp: "",
     status: "Aktif",
+    gajiPokok: "0",
+    periodeGaji: "Bulanan",
+    hariGajian: "25",
   });
 
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
-
-  // SIMPAN KE LOCALSTORAGE SETIAP KALI USERS BERUBAH (HANYA JIKA SUDAH MOUNTED)
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem("wheelskopi_v2_users", JSON.stringify(users));
-    }
-  }, [users, isMounted]);
-
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem("wheelskopi_v2_roles", JSON.stringify(roles));
-    }
-  }, [roles, isMounted]);
 
   const handleAddClick = () => {
     setEditingUser(null);
@@ -118,6 +69,9 @@ export default function UsersPage() {
       store: stores[0].storeName,
       fotoKtp: "",
       status: "Aktif",
+      gajiPokok: "0",
+      periodeGaji: "Bulanan",
+      hariGajian: "25",
     });
     setIsModalOpen(true);
   };
@@ -134,6 +88,9 @@ export default function UsersPage() {
       store: user.store ?? stores[0].storeName,
       fotoKtp: user.fotoKtp,
       status: user.status,
+      gajiPokok: String(user.gajiPokok ?? 0),
+      periodeGaji: user.periodeGaji ?? "Bulanan",
+      hariGajian: user.hariGajian ?? "25",
     });
     setIsModalOpen(true);
   };
@@ -157,13 +114,26 @@ export default function UsersPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingUser) {
-      const updatedUser = { ...editingUser, ...formData };
+    const salary = {
+      gajiPokok: Number(formData.gajiPokok) || 0,
+      periodeGaji: formData.periodeGaji,
+      hariGajian: formData.hariGajian.trim() || "-",
+    };
 
-      if (!formData.password) updatedUser.password = editingUser.password || "";
+    if (editingUser) {
+      const updatedUser: User = {
+        ...editingUser,
+        ...formData,
+        ...salary,
+        password: formData.password || editingUser.password || "",
+      };
       setUsers(users.map((u) => (u.id === editingUser.id ? updatedUser : u)));
     } else {
-      const newUser: User = { id: Date.now().toString(), ...formData };
+      const newUser: User = {
+        id: `USR-${Date.now()}`,
+        ...formData,
+        ...salary,
+      };
       setUsers([...users, newUser]);
     }
 
@@ -193,7 +163,7 @@ export default function UsersPage() {
     }
   };
 
-  const visibleUsers = isMounted ? users : [];
+  const visibleUsers = users;
 
   const filteredUsers = visibleUsers.filter(
     (u) =>
@@ -213,24 +183,6 @@ export default function UsersPage() {
         return "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-300 border border-gray-200 dark:border-neutral-700";
     }
   };
-
-  // 4. CEGAH RENDER TABEL SEBELUM DATA SIAP (MENCEGAH HYDRATION ERROR)
-  if (!isMounted) {
-    return (
-      <AppShell>
-        <div className="w-full space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Management User
-            </h1>
-          </div>
-          <div className="surface p-12 text-center text-muted-foreground">
-            Memuat data...
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell>
@@ -281,6 +233,7 @@ export default function UsersPage() {
                   <th className="px-5 py-4 font-semibold">Role Permission</th>
                   <th className="px-5 py-4 font-semibold">Kontak</th>
                   <th className="px-5 py-4 font-semibold">Store</th>
+                  <th className="px-5 py-4 font-semibold">Gaji</th>
                   <th className="px-5 py-4 font-semibold text-center">
                     Foto KTP
                   </th>
@@ -319,6 +272,19 @@ export default function UsersPage() {
                     </td>
                     <td className="px-5 py-4 text-xs text-muted-foreground">
                       {user.store}
+                    </td>
+                    <td className="px-5 py-4 text-xs">
+                      <div className="font-mono font-semibold text-foreground">
+                        {new Intl.NumberFormat("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                          maximumFractionDigits: 0,
+                        }).format(user.gajiPokok ?? 0)}
+                      </div>
+                      <div className="text-muted-foreground">
+                        {user.periodeGaji ?? "Bulanan"} ·{" "}
+                        {user.hariGajian ?? "-"}
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-center">
                       {user.fotoKtp ? (
@@ -367,7 +333,7 @@ export default function UsersPage() {
                 {filteredUsers.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-5 py-12 text-center text-muted-foreground"
                     >
                       Belum ada data user. Silakan klik &ldquo;Create
@@ -519,6 +485,59 @@ export default function UsersPage() {
                         ? "Kosongkan jika tidak diubah"
                         : "Password..."
                     }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-border pt-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Gaji Pokok
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.gajiPokok}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gajiPokok: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-primary outline-none"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Periode Gaji
+                  </label>
+                  <select
+                    value={formData.periodeGaji}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        periodeGaji:
+                          e.target.value === "Mingguan"
+                            ? "Mingguan"
+                            : "Bulanan",
+                      })
+                    }
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-primary outline-none"
+                  >
+                    <option value="Bulanan">Bulanan</option>
+                    <option value="Mingguan">Mingguan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Hari / Tanggal Gajian
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.hariGajian}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hariGajian: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-primary outline-none"
+                    placeholder="25 atau Jumat"
                   />
                 </div>
               </div>

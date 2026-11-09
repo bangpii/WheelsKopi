@@ -24,7 +24,7 @@ export default function DashboardPage() {
   // FUNGSI UNTUK MENGHAPUS SEMUA DATA (RESET)
   const handleResetData = () => {
     const confirmed = window.confirm(
-      "Apakah Anda yakin ingin menghapus SEMUA data aplikasi? Data produk, transaksi, dan riwayat akan hilang permanen."
+      "Apakah Anda yakin ingin mereset SEMUA data aplikasi? Data akan dikembalikan ke data awal (seed) tanggal 1-8."
     );
 
     if (confirmed) {
@@ -34,7 +34,7 @@ export default function DashboardPage() {
           localStorage.removeItem(key);
         }
       });
-      // Refresh halaman agar data kembali ke 0
+      // Refresh halaman agar DataProvider mengisi kembali data awal.
       window.location.reload();
     }
   };

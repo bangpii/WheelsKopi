@@ -66,8 +66,8 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
   const periodMonth = filterStart ? filterStart.getMonth() : currentMonth;
   const periodLabel = `${MONTHS[periodMonth]} ${periodYear}`;
 
-  // 3. HITUNG PENDAPATAN HARIAN TANGGAL 1-5
-  const dailyData = [1, 2, 3, 4, 5].map((day) => {
+  // 3. HITUNG PENDAPATAN HARIAN TANGGAL 1-8
+  const dailyData = [1, 2, 3, 4, 5, 6, 7, 8].map((day) => {
     const total = filteredTransactions.reduce((acc, trx) => {
       const dateStr = trx.tanggal || trx.date || trx.createdAt;
       if (!dateStr) return acc;
@@ -113,13 +113,13 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
           <h2 className="font-display text-base font-semibold tracking-tight">Performa Penjualan</h2>
           <p className="mt-1 text-[13px] text-muted-foreground">
             {mounted
-              ? `Pendapatan harian tanggal 1–5 · ${periodLabel}`
-              : "Pendapatan harian tanggal 1–5"}
+              ? `Pendapatan harian tanggal 1–8 · ${periodLabel}`
+              : "Pendapatan harian tanggal 1–8"}
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/60 p-1 text-xs font-medium">
           <span className="rounded-lg bg-card px-3 py-1.5 text-foreground shadow-sm">
-            Tanggal 1–5
+            Tanggal 1–8
           </span>
           <Link
             href="/profit"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Building2,
   CircleDollarSign,
@@ -7,8 +8,9 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
-import { monthlyPerformance, selloutEntries } from "@/lib/operations-data";
+import { buildReportData } from "@/lib/report-data";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -16,63 +18,29 @@ const thClass =
 const tdClass = "whitespace-nowrap px-4 py-3.5 text-sm";
 
 export default function ReportSelloutPage() {
-  const totalRevenue = monthlyPerformance.reduce(
-    (sum, month) => sum + month.revenue,
+  const { sellouts, products } = useData();
+  const report = useMemo(
+    () => buildReportData(sellouts, products),
+    [sellouts, products],
+  );
+
+  const {
+    revenue: totalRevenue,
+    orders: totalOrders,
+    qty: totalQty,
+    days,
+    stores: byStore,
+    categories: byCategory,
+  } = report;
+
+  const averageOrder =
+    totalOrders === 0 ? 0 : Math.round(totalRevenue / totalOrders);
+  const maxRevenue = Math.max(1, ...days.map((day) => day.revenue));
+  const cityRevenue = byStore.reduce((sum, row) => sum + row.revenue, 0);
+  const categoryRevenue = byCategory.reduce(
+    (sum, row) => sum + row.revenue,
     0,
   );
-
-  const totalOrders = monthlyPerformance.reduce(
-    (sum, month) => sum + month.orders,
-    0,
-  );
-
-  const totalQty = selloutEntries.reduce((sum, entry) => sum + entry.qty, 0);
-  const averageOrder = Math.round(totalRevenue / totalOrders);
-
-  const maxRevenue = Math.max(
-    ...monthlyPerformance.map((month) => month.revenue),
-  );
-
-  const byCity = Array.from(
-    selloutEntries.reduce((groups, entry) => {
-      const current = groups.get(entry.city) ?? {
-        city: entry.city,
-        revenue: 0,
-        qty: 0,
-        orders: 0,
-      };
-
-      current.revenue += entry.qty * entry.unitPrice;
-      current.qty += entry.qty;
-      current.orders += 1;
-      groups.set(entry.city, current);
-
-      return groups;
-    }, new Map<string, { city: string; revenue: number; qty: number; orders: number }>()),
-  )
-    .map(([, value]) => value)
-    .sort((a, b) => b.revenue - a.revenue);
-
-  const byCategory = Array.from(
-    selloutEntries.reduce((groups, entry) => {
-      const current = groups.get(entry.category) ?? {
-        category: entry.category,
-        revenue: 0,
-        qty: 0,
-      };
-
-      current.revenue += entry.qty * entry.unitPrice;
-      current.qty += entry.qty;
-      groups.set(entry.category, current);
-
-      return groups;
-    }, new Map<string, { category: string; revenue: number; qty: number }>()),
-  )
-    .map(([, value]) => value)
-    .sort((a, b) => b.revenue - a.revenue);
-
-  const cityRevenue = byCity.reduce((sum, row) => sum + row.revenue, 0);
-  const categoryRevenue = byCategory.reduce((sum, row) => sum + row.revenue, 0);
 
   return (
     <AppShell>
@@ -85,8 +53,8 @@ export default function ReportSelloutPage() {
             Report Sellout
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Rekap penjualan per bulan, kota, dan kategori produk selama enam
-            bulan terakhir.
+            Rekap penjualan harian per toko dan kategori produk dari transaksi
+            sellout tanggal 1-8.
           </p>
         </header>
 
@@ -148,31 +116,31 @@ export default function ReportSelloutPage() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]">
           <section className="surface p-5 sm:p-6">
             <h2 className="font-display text-base font-semibold tracking-tight">
-              Omzet Bulanan
+              Omzet Harian
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Perbandingan omzet dan jumlah order per bulan.
+              Perbandingan omzet dan jumlah order per hari.
             </p>
             <div className="mt-5 flex h-44 items-end gap-3">
-              {monthlyPerformance.map((month) => (
+              {days.map((day) => (
                 <div
-                  key={month.month}
+                  key={day.key}
                   className="flex flex-1 flex-col items-center gap-2"
                 >
                   <span className="font-mono text-[10px] text-muted-foreground">
-                    {(month.revenue / 1_000_000).toFixed(0)}jt
+                    {(day.revenue / 1_000_000).toFixed(0)}jt
                   </span>
                   <div className="flex h-32 w-full items-end rounded-lg bg-muted/50">
                     <div
                       className="w-full rounded-lg bg-gradient-to-t from-primary to-primary/55"
                       style={{
-                        height: `${Math.round((month.revenue / maxRevenue) * 100)}%`,
+                        height: `${Math.round((day.revenue / maxRevenue) * 100)}%`,
                       }}
-                      title={rupiah.format(month.revenue)}
+                      title={rupiah.format(day.revenue)}
                     />
                   </div>
                   <span className="text-[10px] font-medium text-muted-foreground">
-                    {month.month}
+                    {day.label}
                   </span>
                 </div>
               ))}
@@ -220,17 +188,17 @@ export default function ReportSelloutPage() {
         <section className="surface overflow-hidden">
           <div className="border-b border-border p-5">
             <h2 className="font-display text-base font-semibold tracking-tight">
-              Penjualan per Kota
+              Penjualan per Toko
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Distribusi omzet berdasarkan kota customer.
+              Distribusi omzet berdasarkan toko.
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left">
               <thead className="border-b border-border bg-muted/60">
                 <tr>
-                  <th className={thClass}>Kota</th>
+                  <th className={thClass}>Toko</th>
                   <th className={`${thClass} text-center`}>Order</th>
                   <th className={`${thClass} text-center`}>Qty</th>
                   <th className={`${thClass} text-right`}>Omzet</th>
@@ -238,7 +206,7 @@ export default function ReportSelloutPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {byCity.map((row) => {
+                {byStore.map((row) => {
                   const share =
                     cityRevenue === 0
                       ? 0
@@ -246,10 +214,10 @@ export default function ReportSelloutPage() {
 
                   return (
                     <tr
-                      key={row.city}
+                      key={row.store}
                       className="transition-colors hover:bg-muted/40"
                     >
-                      <td className={`${tdClass} font-medium`}>{row.city}</td>
+                      <td className={`${tdClass} font-medium`}>{row.store}</td>
                       <td
                         className={`${tdClass} text-center font-mono tabular-nums`}
                       >
@@ -289,45 +257,45 @@ export default function ReportSelloutPage() {
         <section className="surface overflow-hidden">
           <div className="border-b border-border p-5">
             <h2 className="font-display text-base font-semibold tracking-tight">
-              Rekap Bulanan
+              Rekap Harian
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Omzet, order, dan rata-rata nilai order.
+              Omzet, order, dan rata-rata nilai order per hari.
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left">
               <thead className="border-b border-border bg-muted/60">
                 <tr>
-                  <th className={thClass}>Bulan</th>
+                  <th className={thClass}>Tanggal</th>
                   <th className={`${thClass} text-center`}>Order</th>
                   <th className={`${thClass} text-right`}>Omzet</th>
                   <th className={`${thClass} text-right`}>Rata-rata Order</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
-                {monthlyPerformance.map((month) => (
+                {days.map((day) => (
                   <tr
-                    key={month.month}
+                    key={day.key}
                     className="transition-colors hover:bg-muted/40"
                   >
                     <td className={`${tdClass} font-medium`}>
-                      {month.month} 2026
+                      {day.label}
                     </td>
                     <td
                       className={`${tdClass} text-center font-mono tabular-nums`}
                     >
-                      {month.orders}
+                      {day.orders}
                     </td>
                     <td
                       className={`${tdClass} text-right font-mono font-semibold tabular-nums`}
                     >
-                      {rupiah.format(month.revenue)}
+                      {rupiah.format(day.revenue)}
                     </td>
                     <td
                       className={`${tdClass} text-right font-mono text-muted-foreground tabular-nums`}
                     >
-                      {rupiah.format(Math.round(month.revenue / month.orders))}
+                      {rupiah.format(day.orders === 0 ? 0 : Math.round(day.revenue / day.orders))}
                     </td>
                   </tr>
                 ))}

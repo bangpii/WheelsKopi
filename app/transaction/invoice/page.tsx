@@ -5,11 +5,10 @@ import Image from "next/image";
 import { FileText, Printer, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
+import { useData } from "@/lib/context/data-context";
 import {
-  SELLOUT_STORAGE_KEY,
   type SelloutRecord,
 } from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
 
 const thClass =
   "whitespace-nowrap border-b border-border px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground";
@@ -20,7 +19,7 @@ const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none focus:border-primary/50";
 
 export default function InvoicePage() {
-  const { items: records, update: setRecords } = useLocalList<SelloutRecord>(SELLOUT_STORAGE_KEY);
+  const { sellouts: records, setSellouts: setRecords } = useData();
   const [selected, setSelected] = useState<SelloutRecord | null>(null);
   const [service, setService] = useState("0");
   const [trade, setTrade] = useState("0");

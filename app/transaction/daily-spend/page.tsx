@@ -7,11 +7,10 @@ import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
 import { storeNames } from "@/lib/master-data";
 import {
-  DAILY_SPEND_STORAGE_KEY,
   displayDate,
+  todayInputDate,
   type DailySpendItemRecord,
 } from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none focus:border-primary/50";
@@ -42,7 +41,7 @@ interface SpendForm {
 }
 
 const emptyForm: SpendForm = {
-  date: "2026-11-09",
+  date: "",
   store: storeNames[0],
   description: "",
   category: "Operasional",
@@ -72,8 +71,11 @@ function isoWeekKey(value: string) {
 }
 
 export default function DailySpendPage() {
-  const { users } = useData();
-  const { items: records, update: setRecords } = useLocalList<DailySpendItemRecord>(DAILY_SPEND_STORAGE_KEY);
+  const {
+    users,
+    dailySpends: records,
+    setDailySpends: setRecords,
+  } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<SpendForm>(emptyForm);
   const [error, setError] = useState("");
@@ -97,7 +99,7 @@ export default function DailySpendPage() {
   const total = amount + salary - spooringCut;
 
   const openCreate = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, date: todayInputDate() });
     setError("");
     setIsOpen(true);
   };
@@ -138,6 +140,7 @@ export default function DailySpendPage() {
     const record: DailySpendItemRecord = {
       id: `DS-${records.length + 1}-${form.description}`,
       date: displayDate(form.date),
+      dateISO: form.date,
       store: form.store,
       description: form.description,
       category: form.category,
@@ -150,6 +153,7 @@ export default function DailySpendPage() {
       salaryPeriodType:
         salary > 0 ? selectedEmployee?.periodeGaji ?? "Bulanan" : undefined,
       total,
+      status: "Approved",
       createdAt: new Date().toLocaleDateString("id-ID"),
     };
 

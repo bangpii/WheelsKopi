@@ -6,12 +6,11 @@ import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
 import { storeNames } from "@/lib/master-data";
 import {
-  MOVEMENT_STORAGE_KEY,
   displayDate,
+  todayInputDate,
   type MovementItem,
   type MovementRecord,
 } from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none focus:border-primary/50";
@@ -29,12 +28,15 @@ interface MovementForm {
 }
 
 export default function MovementPage() {
-  const { products } = useData();
-  const { items: records, update: setRecords } = useLocalList<MovementRecord>(MOVEMENT_STORAGE_KEY);
+  const {
+    products,
+    movements: records,
+    setMovements: setRecords,
+  } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<MovementForm>({
     number: "",
-    date: "2026-11-09",
+    date: "",
     sourceStore: storeNames[0],
     destinationStore: storeNames[1] ?? storeNames[0],
   });
@@ -47,7 +49,7 @@ export default function MovementPage() {
   const openCreate = () => {
     setForm({
       number: `MV-${String(records.length + 1).padStart(4, "0")}`,
-      date: "2026-11-09",
+      date: todayInputDate(),
       sourceStore: storeNames[0],
       destinationStore: storeNames[1] ?? storeNames[0],
     });

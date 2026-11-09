@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
+import { useData } from "@/lib/context/data-context";
 import {
   LEDGER_TYPE_LABEL,
   createLedgerEntry,
@@ -22,13 +23,12 @@ import {
 } from "@/lib/finance-store";
 import { storeNames } from "@/lib/master-data";
 import {
-  FINANCE_STORE_STORAGE_KEY,
   displayDate,
+  todayInputDate,
   type FinanceLedgerEntry,
   type FinanceLedgerType,
   type FinanceStoreDayRecord,
 } from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground";
@@ -55,7 +55,7 @@ interface FinanceForm {
 
 const emptyForm = (): FinanceForm => ({
   store: storeNames[0],
-  date: "2026-11-09",
+  date: todayInputDate(),
   ledger: [
     {
       ...createLedgerEntry("payment"),
@@ -83,9 +83,7 @@ function formToLedger(entries: LedgerFormEntry[]): FinanceLedgerEntry[] {
 const ledgerTypes = Object.keys(LEDGER_TYPE_LABEL) as FinanceLedgerType[];
 
 export default function FinanceStorePage() {
-  const { items: records, update } = useLocalList<FinanceStoreDayRecord>(
-    FINANCE_STORE_STORAGE_KEY,
-  );
+  const { financeStores: records, setFinanceStores: update } = useData();
   const [store, setStore] = useState("Semua Store");
   const [date, setDate] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -93,7 +91,7 @@ export default function FinanceStorePage() {
   const [detail, setDetail] = useState<FinanceStoreDayRecord | null>(null);
   const [form, setForm] = useState<FinanceForm>({
     store: storeNames[0],
-    date: "2026-11-09",
+    date: "",
     ledger: [],
   });
   const [error, setError] = useState("");

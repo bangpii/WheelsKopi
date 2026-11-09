@@ -7,13 +7,13 @@ import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
 import { storeNames } from "@/lib/master-data";
 import {
-  SELLOUT_STORAGE_KEY,
   displayDate,
+  inputTime,
   selloutSubtotal,
+  todayInputDate,
   type SelloutItem,
   type SelloutRecord,
 } from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-ring/30";
@@ -33,7 +33,7 @@ interface SelloutForm {
 }
 
 const emptyForm: SelloutForm = {
-  date: "2026-11-09",
+  date: "",
   customer: "",
   description: "",
   car: "",
@@ -42,8 +42,13 @@ const emptyForm: SelloutForm = {
 };
 
 export default function SelloutPage() {
-  const { products, setProducts, customers } = useData();
-  const { items: records, update: setRecords } = useLocalList<SelloutRecord>(SELLOUT_STORAGE_KEY);
+  const {
+    products,
+    setProducts,
+    customers,
+    sellouts: records,
+    setSellouts: setRecords,
+  } = useData();
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<SelloutForm>(emptyForm);
@@ -76,7 +81,7 @@ export default function SelloutPage() {
   ).length;
 
   const openCreate = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, date: todayInputDate() });
     setItems([]);
     setSelectedProduct("");
     setQty("1");
@@ -140,6 +145,9 @@ export default function SelloutPage() {
       id: `${number}-${form.customer}`,
       number,
       date: displayDate(form.date),
+      dateISO: form.date,
+      time: inputTime(),
+      paymentMethod: "Transfer",
       customer: form.customer,
       description: form.description,
       car: form.car,

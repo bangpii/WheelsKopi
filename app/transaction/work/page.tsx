@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, ClipboardCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
-import {
-  SELLOUT_STORAGE_KEY,
-  type SelloutRecord,
-} from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
+import { useData } from "@/lib/context/data-context";
 
 const thClass =
   "whitespace-nowrap border-b border-border px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground";
@@ -16,7 +12,7 @@ const thClass =
 const tdClass = "whitespace-nowrap border-b border-border/70 px-4 py-3 text-sm";
 
 export default function WorkPage() {
-  const { items: records, update: setRecords } = useLocalList<SelloutRecord>(SELLOUT_STORAGE_KEY);
+  const { sellouts: records, setSellouts: setRecords } = useData();
   const [tab, setTab] = useState<"Menunggu Approval" | "Siap Invoice">(
     "Menunggu Approval",
   );

@@ -20,10 +20,31 @@ import {
   customers as demoCustomers,
   kpis as demoKpis,
   stockItems as demoStocks,
-  transactions as demoTransactions,
 } from "@/lib/dashboard-data";
 import type { DistribusiItem } from "@/lib/distribusi-data";
 import { initialDistribusiItems } from "@/lib/distribusi-data";
+import {
+  SELLOUT_STORAGE_KEY,
+  MOVEMENT_STORAGE_KEY,
+  DAILY_SPEND_STORAGE_KEY,
+  TRADE_STORAGE_KEY,
+  FINANCE_STORE_STORAGE_KEY,
+} from "@/lib/transaction-data";
+import type {
+  DailySpendItemRecord,
+  FinanceStoreDayRecord,
+  MovementRecord,
+  SelloutRecord,
+  TradeRecord,
+} from "@/lib/transaction-data";
+import {
+  seedDailySpends,
+  seedFinanceStores,
+  seedMovements,
+  seedSellouts,
+  seedTrades,
+  selloutToTransaction,
+} from "@/lib/synced-data";
 import {
   rolePermissions as defaultPermissions,
   roles as defaultRoles,
@@ -64,9 +85,13 @@ interface GlobalData {
   roles: string[];
   rolePermissions: RolePermission[];
   users: UserRecord[];
+  sellouts: SelloutRecord[];
+  movements: MovementRecord[];
+  dailySpends: DailySpendItemRecord[];
+  trades: TradeRecord[];
+  financeStores: FinanceStoreDayRecord[];
 
   setStockItems: Dispatch<SetStateAction<StockItem[]>>;
-  setTransactions: Dispatch<SetStateAction<Transaction[]>>;
   setKpis: Dispatch<SetStateAction<Kpi[]>>;
   setCustomers: Dispatch<SetStateAction<Customer[]>>;
   setSuppliers: Dispatch<SetStateAction<SupplierRecord[]>>;
@@ -74,6 +99,11 @@ interface GlobalData {
   setRoles: Dispatch<SetStateAction<string[]>>;
   setRolePermissions: Dispatch<SetStateAction<RolePermission[]>>;
   setUsers: Dispatch<SetStateAction<UserRecord[]>>;
+  setSellouts: Dispatch<SetStateAction<SelloutRecord[]>>;
+  setMovements: Dispatch<SetStateAction<MovementRecord[]>>;
+  setDailySpends: Dispatch<SetStateAction<DailySpendItemRecord[]>>;
+  setTrades: Dispatch<SetStateAction<TradeRecord[]>>;
+  setFinanceStores: Dispatch<SetStateAction<FinanceStoreDayRecord[]>>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -119,7 +149,6 @@ const seededProducts: Product[] = initialDistribusiItems.map((item) =>
 
 const STORAGE_KEYS = {
   stocks: "wheelskopi_v3_stocks",
-  transactions: "wheelskopi_v3_transactions",
   kpis: "wheelskopi_v3_kpis",
   customers: "wheelskopi_v3_customers",
   suppliers: "wheelskopi_v2_suppliers",
@@ -127,6 +156,11 @@ const STORAGE_KEYS = {
   roles: "wheelskopi_v2_roles",
   permissions: "wheelskopi_v2_permissions",
   users: "wheelskopi_v2_users",
+  sellouts: SELLOUT_STORAGE_KEY,
+  movements: MOVEMENT_STORAGE_KEY,
+  dailySpends: DAILY_SPEND_STORAGE_KEY,
+  trades: TRADE_STORAGE_KEY,
+  financeStores: FINANCE_STORE_STORAGE_KEY,
 } as const;
 
 function readStored<T>(key: string, fallback: T): T {
@@ -192,8 +226,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     STORAGE_KEYS.stocks,
     demoStocks,
   );
-  const [transactions, setTransactions, clientTransactions] =
-    usePersistentCollection(STORAGE_KEYS.transactions, demoTransactions);
   const [kpis, setKpis, clientKpis] = usePersistentCollection(
     STORAGE_KEYS.kpis,
     demoKpis,
@@ -220,31 +252,48 @@ export function DataProvider({ children }: { children: ReactNode }) {
     STORAGE_KEYS.users,
     seededUsers,
   );
+  const [sellouts, setSellouts, clientSellouts] = usePersistentCollection(
+    STORAGE_KEYS.sellouts,
+    seedSellouts,
+  );
+  const [movements, setMovements, clientMovements] = usePersistentCollection(
+    STORAGE_KEYS.movements,
+    seedMovements,
+  );
+  const [dailySpends, setDailySpends, clientDailySpends] =
+    usePersistentCollection(STORAGE_KEYS.dailySpends, seedDailySpends);
+  const [trades, setTrades, clientTrades] = usePersistentCollection(
+    STORAGE_KEYS.trades,
+    seedTrades,
+  );
+  const [financeStores, setFinanceStores, clientFinanceStores] =
+    usePersistentCollection(STORAGE_KEYS.financeStores, seedFinanceStores);
+
+  const transactions = useMemo(
+    () => sellouts.map(selloutToTransaction),
+    [sellouts],
+  );
 
   const hydrated =
     clientStocks &&
-    clientTransactions &&
     clientKpis &&
     clientCustomers &&
     clientSuppliers &&
     clientProducts &&
     clientRoles &&
     clientPermissions &&
-    clientUsers;
+    clientUsers &&
+    clientSellouts &&
+    clientMovements &&
+    clientDailySpends &&
+    clientTrades &&
+    clientFinanceStores;
 
   /* Persist ke localStorage */
   useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.stocks, JSON.stringify(stockItems));
   }, [hydrated, stockItems]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(
-      STORAGE_KEYS.transactions,
-      JSON.stringify(transactions),
-    );
-  }, [hydrated, transactions]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -284,13 +333,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
   }, [hydrated, users]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.sellouts, JSON.stringify(sellouts));
+  }, [hydrated, sellouts]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.movements, JSON.stringify(movements));
+  }, [hydrated, movements]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.dailySpends, JSON.stringify(dailySpends));
+  }, [dailySpends, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.trades, JSON.stringify(trades));
+  }, [hydrated, trades]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE_KEYS.financeStores,
+      JSON.stringify(financeStores),
+    );
+  }, [financeStores, hydrated]);
+
   return (
     <DataContext.Provider
       value={{
         stockItems,
         setStockItems,
         transactions,
-        setTransactions,
         kpis,
         setKpis,
         customers,
@@ -305,6 +381,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setRolePermissions,
         users,
         setUsers,
+        sellouts,
+        setSellouts,
+        movements,
+        setMovements,
+        dailySpends,
+        setDailySpends,
+        trades,
+        setTrades,
+        financeStores,
+        setFinanceStores,
       }}
     >
       {children}

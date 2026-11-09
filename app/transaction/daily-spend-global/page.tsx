@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { Pencil, Trash2, Wallet, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
 import { stores } from "@/lib/master-data";
-import { dailySpends as demoSpends, type DailySpendRecord } from "@/lib/warehouse-data";
+import {
+  displayDate,
+  type DailySpendItemRecord,
+} from "@/lib/transaction-data";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -16,13 +20,18 @@ const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-ring/30";
 
 export default function DailySpendGlobalPage() {
-  const [rows, setRows] = useState<DailySpendRecord[]>(demoSpends);
-  const [editing, setEditing] = useState<DailySpendRecord | null>(null);
+  const { dailySpends: rows, setDailySpends: setRows } = useData();
+  const [editing, setEditing] = useState<DailySpendItemRecord | null>(null);
   const [form, setForm] = useState({ number: "", date: "", store: "", total: 0 });
 
-  const openEdit = (row: DailySpendRecord) => {
+  const openEdit = (row: DailySpendItemRecord) => {
     setEditing(row);
-    setForm({ number: row.number, date: row.date, store: row.store, total: row.total });
+    setForm({
+      number: row.id,
+      date: row.dateISO ?? row.date,
+      store: row.store,
+      total: row.total,
+    });
   };
 
   const handleSave = (event: React.FormEvent) => {
@@ -32,10 +41,25 @@ export default function DailySpendGlobalPage() {
       return;
     }
 
+    const salary = editing.salary;
+    const spooringCut = editing.spooring * 0.3;
+    const amount = Math.max(0, form.total - salary + spooringCut);
+
     setRows(
       rows.map((row) =>
         row.id === editing.id
-          ? { ...row, ...form, history: [...row.history, `Direvisi pada ${new Date().toLocaleDateString("id-ID")}`] }
+          ? {
+              ...row,
+              date: displayDate(form.date),
+              dateISO: form.date,
+              store: form.store,
+              amount,
+              total: form.total,
+              history: [
+                ...(row.history ?? []),
+                `Direvisi pada ${new Date().toLocaleDateString("id-ID")}`,
+              ],
+            }
           : row,
       ),
     );
@@ -74,7 +98,7 @@ export default function DailySpendGlobalPage() {
                         <span className="flex size-9 items-center justify-center rounded-xl bg-warning-soft text-warning">
                           <Wallet className="size-4" />
                         </span>
-                        <span className="font-mono font-medium">{row.number || "-"}</span>
+                        <span className="font-mono font-medium">{row.id}</span>
                       </div>
                     </td>
                     <td className={`${tdClass} text-muted-foreground`}>{row.date}</td>
@@ -83,10 +107,10 @@ export default function DailySpendGlobalPage() {
                     <td className={tdClass}>
                       <span
                         className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                          row.status === "Approved" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+                          (row.status ?? "Approved") === "Approved" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
                         }`}
                       >
-                        {row.status}
+                        {row.status ?? "Approved"}
                       </span>
                     </td>
                     <td className={`${tdClass} text-center`}>

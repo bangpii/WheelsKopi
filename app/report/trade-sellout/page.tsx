@@ -4,13 +4,13 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
+import { useData } from "@/lib/context/data-context";
 import { storeNames } from "@/lib/master-data";
 import {
-  TRADE_STORAGE_KEY,
   displayDate,
+  todayInputDate,
   type TradeRecord,
 } from "@/lib/transaction-data";
-import { useLocalList } from "@/lib/use-local-list";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none focus:border-primary/50";
@@ -32,7 +32,7 @@ interface TradeForm {
 
 const emptyForm: TradeForm = {
   store: storeNames[0],
-  date: "2026-11-09",
+  date: "",
   bonNumber: "",
   product: "",
   price: "0",
@@ -41,7 +41,7 @@ const emptyForm: TradeForm = {
 };
 
 export default function TradeSelloutPage() {
-  const { items: records, update: setRecords } = useLocalList<TradeRecord>(TRADE_STORAGE_KEY);
+  const { trades: records, setTrades: setRecords } = useData();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<TradeForm>(emptyForm);
   const [error, setError] = useState("");
@@ -102,7 +102,7 @@ export default function TradeSelloutPage() {
           <button
             type="button"
             onClick={() => {
-              setForm(emptyForm);
+              setForm({ ...emptyForm, date: todayInputDate() });
               setError("");
               setIsOpen(true);
             }}

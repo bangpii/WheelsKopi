@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CircleDollarSign,
   Percent,
@@ -9,8 +9,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
-import { monthlyPerformance, profitRows } from "@/lib/operations-data";
+import { buildReportData } from "@/lib/report-data";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -18,55 +19,29 @@ const thClass =
 const tdClass = "whitespace-nowrap px-4 py-3.5 text-sm";
 
 export default function ReportProfitPage() {
+  const { sellouts, products } = useData();
+  const report = useMemo(
+    () => buildReportData(sellouts, products),
+    [sellouts, products],
+  );
   const [search, setSearch] = useState("");
 
   const keyword = search.trim().toLowerCase();
 
-  const filtered = profitRows.filter(
+  const filtered = report.products.filter(
     (row) =>
       keyword.length === 0 ||
       row.product.toLowerCase().includes(keyword) ||
       row.category.toLowerCase().includes(keyword) ||
-      row.city.toLowerCase().includes(keyword),
+      row.store.toLowerCase().includes(keyword),
   );
 
-  const revenue = monthlyPerformance.reduce(
-    (sum, month) => sum + month.revenue,
-    0,
-  );
-
-  const cogs = monthlyPerformance.reduce((sum, month) => sum + month.cogs, 0);
-
-  const profit = monthlyPerformance.reduce(
-    (sum, month) => sum + month.profit,
-    0,
-  );
-
+  const { revenue, cogs, profit } = report;
   const margin = revenue === 0 ? 0 : (profit / revenue) * 100;
-
-  const maxProfit = Math.max(
-    ...monthlyPerformance.map((month) => month.profit),
+  const maxProfit = Math.max(1, ...report.days.map((day) => day.profit));
+  const byCategory = [...report.categories].sort(
+    (a, b) => b.profit - a.profit,
   );
-
-  const byCategory = Array.from(
-    profitRows.reduce((groups, row) => {
-      const current = groups.get(row.category) ?? {
-        category: row.category,
-        revenue: 0,
-        profit: 0,
-        qty: 0,
-      };
-
-      current.revenue += row.revenue;
-      current.profit += row.profit;
-      current.qty += row.qty;
-      groups.set(row.category, current);
-
-      return groups;
-    }, new Map<string, { category: string; revenue: number; profit: number; qty: number }>()),
-  )
-    .map(([, value]) => value)
-    .sort((a, b) => b.profit - a.profit);
 
   return (
     <AppShell>
@@ -80,7 +55,7 @@ export default function ReportProfitPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Laba kotor dari selisih omzet dan harga pokok penjualan, dirinci per
-            bulan, kategori, dan produk.
+            hari, kategori, dan produk.
           </p>
         </header>
 
@@ -142,31 +117,31 @@ export default function ReportProfitPage() {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]">
           <section className="surface p-5 sm:p-6">
             <h2 className="font-display text-base font-semibold tracking-tight">
-              Laba Bulanan
+              Laba Harian
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Perbandingan laba kotor enam bulan terakhir.
+              Perbandingan laba kotor per hari.
             </p>
             <div className="mt-5 flex h-44 items-end gap-3">
-              {monthlyPerformance.map((month) => (
+              {report.days.map((day) => (
                 <div
-                  key={month.month}
+                  key={day.key}
                   className="flex flex-1 flex-col items-center gap-2"
                 >
                   <span className="font-mono text-[10px] text-muted-foreground">
-                    {(month.profit / 1_000_000).toFixed(1)}jt
+                    {(day.profit / 1_000_000).toFixed(1)}jt
                   </span>
                   <div className="flex h-32 w-full items-end rounded-lg bg-muted/50">
                     <div
                       className="w-full rounded-lg bg-gradient-to-t from-success to-success/50"
                       style={{
-                        height: `${Math.round((month.profit / maxProfit) * 100)}%`,
+                        height: `${Math.round((day.profit / maxProfit) * 100)}%`,
                       }}
-                      title={rupiah.format(month.profit)}
+                      title={rupiah.format(day.profit)}
                     />
                   </div>
                   <span className="text-[10px] font-medium text-muted-foreground">
-                    {month.month}
+                    {day.label}
                   </span>
                 </div>
               ))}
@@ -225,7 +200,7 @@ export default function ReportProfitPage() {
                 type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari produk, kategori, kota..."
+                placeholder="Cari produk, kategori, toko..."
                 className="w-full rounded-xl border border-border bg-background/70 py-2.5 pr-3 pl-9 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/50 focus:ring-2 focus:ring-ring/30"
               />
             </div>
@@ -236,7 +211,7 @@ export default function ReportProfitPage() {
                 <tr>
                   <th className={thClass}>Produk</th>
                   <th className={thClass}>Kategori</th>
-                  <th className={thClass}>Kota</th>
+                  <th className={thClass}>Toko</th>
                   <th className={`${thClass} text-center`}>Qty</th>
                   <th className={`${thClass} text-right`}>Omzet</th>
                   <th className={`${thClass} text-right`}>HPP</th>
@@ -273,7 +248,7 @@ export default function ReportProfitPage() {
                           </span>
                         </td>
                         <td className={`${tdClass} text-muted-foreground`}>
-                          {row.city}
+                          {row.store}
                         </td>
                         <td
                           className={`${tdClass} text-center font-mono tabular-nums`}

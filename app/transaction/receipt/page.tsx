@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Eye, Plus, Printer, ReceiptText, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { purchaseOrders } from "@/lib/operations-data";
+import { todayInputDate } from "@/lib/transaction-data";
 import { receiptPOs as demoReceipts, type ReceiptPORecord } from "@/lib/warehouse-data";
 
 const thClass =
@@ -24,7 +25,7 @@ export default function ReceiptPurchaseOrderPage() {
     poNumber: "",
     supplier: "",
     address: "",
-    date: "2026-10-30",
+    date: "",
   });
 
   const handleCreate = (event: React.FormEvent) => {
@@ -69,7 +70,7 @@ export default function ReceiptPurchaseOrderPage() {
           <button
             type="button"
             onClick={() => {
-              setForm({ number: "", poNumber: "", supplier: "", address: "", date: "2026-10-30" });
+              setForm({ number: "", poNumber: "", supplier: "", address: "", date: todayInputDate() });
               setIsOpen(true);
             }}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"

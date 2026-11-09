@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { Globe2, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { useData } from "@/lib/context/data-context";
 import { rupiah } from "@/lib/dashboard-data";
-import { selloutGlobals as demoGlobals, type SelloutGlobalRecord } from "@/lib/warehouse-data";
+import { storeNames } from "@/lib/master-data";
+import {
+  displayDate,
+  todayInputDate,
+  type SelloutRecord,
+} from "@/lib/transaction-data";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -16,34 +22,38 @@ const fieldClass =
 
 const emptyForm = {
   number: "",
-  date: "2026-10-30",
-  store: "KKW",
+  date: "",
+  store: storeNames[0],
   customer: "",
   discount: 0,
   grandTotal: 0,
 };
 
 export default function SelloutGlobalPage() {
-  const [rows, setRows] = useState<SelloutGlobalRecord[]>(demoGlobals);
+  const { sellouts: rows, setSellouts: setRows } = useData();
   const [form, setForm] = useState(emptyForm);
-  const [editing, setEditing] = useState<SelloutGlobalRecord | null>(null);
+  const [editing, setEditing] = useState<SelloutRecord | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...emptyForm, number: `SO-${String(rows.length + 2601).padStart(4, "0")}` });
+    setForm({
+      ...emptyForm,
+      date: todayInputDate(),
+      number: `SO-G${String(rows.length + 1).padStart(3, "0")}`,
+    });
     setIsOpen(true);
   };
 
-  const openEdit = (row: SelloutGlobalRecord) => {
+  const openEdit = (row: SelloutRecord) => {
     setEditing(row);
     setForm({
       number: row.number,
-      date: row.date,
+      date: row.dateISO ?? row.date,
       store: row.store,
       customer: row.customer,
-      discount: row.discount,
-      grandTotal: row.grandTotal,
+      discount: row.discount ?? 0,
+      grandTotal: row.total,
     });
     setIsOpen(true);
   };
@@ -51,21 +61,46 @@ export default function SelloutGlobalPage() {
   const handleSave = (event: React.FormEvent) => {
     event.preventDefault();
 
+    const date = displayDate(form.date);
+    const patch = {
+      number: form.number,
+      date,
+      dateISO: form.date,
+      store: form.store,
+      customer: form.customer,
+      discount: form.discount,
+      total: form.grandTotal,
+    };
+
     if (editing) {
       setRows(
         rows.map((row) =>
           row.id === editing.id
-            ? { ...row, ...form, status: "Sold", history: [...row.history, `Diedit pada ${new Date().toLocaleDateString("id-ID")}`] }
+            ? {
+                ...row,
+                ...patch,
+                history: [
+                  ...(row.history ?? []),
+                  `Diedit pada ${new Date().toLocaleDateString("id-ID")}`,
+                ],
+              }
             : row,
         ),
       );
     } else {
       setRows([
         {
-          id: `SG-${Date.now()}`,
-          ...form,
-          status: "Sold",
-          history: [`Dibuat pada ${new Date().toLocaleDateString("id-ID")}`],
+          id: `SG-${rows.length + 1}-${form.number}`,
+          ...patch,
+          description: "Sellout global",
+          car: "-",
+          licensePlate: "-",
+          items: [],
+          status: "Sudah Invoice",
+          createdAt: date,
+          history: [
+            `Dibuat pada ${new Date().toLocaleDateString("id-ID")}`,
+          ],
         },
         ...rows,
       ]);
@@ -121,9 +156,9 @@ export default function SelloutGlobalPage() {
                     <td className={`${tdClass} font-medium`}>{row.store}</td>
                     <td className={tdClass}>{row.customer}</td>
                     <td className={`${tdClass} text-right font-mono text-danger tabular-nums`}>
-                      {row.discount > 0 ? `- ${rupiah.format(row.discount)}` : "-"}
+                      {(row.discount ?? 0) > 0 ? `- ${rupiah.format(row.discount ?? 0)}` : "-"}
                     </td>
-                    <td className={`${tdClass} text-right font-mono font-semibold tabular-nums`}>{rupiah.format(row.grandTotal)}</td>
+                    <td className={`${tdClass} text-right font-mono font-semibold tabular-nums`}>{rupiah.format(row.total)}</td>
                     <td className={tdClass}>
                       <span className="rounded-full bg-success-soft px-2.5 py-1 text-[10px] font-semibold text-success">{row.status}</span>
                     </td>

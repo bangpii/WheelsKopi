@@ -14,6 +14,9 @@ export interface SelloutRecord {
   id: string;
   number: string;
   date: string;
+  dateISO?: string;
+  time?: string;
+  paymentMethod?: "Transfer" | "QRIS" | "Tunai";
   customer: string;
   description: string;
   car: string;
@@ -21,8 +24,10 @@ export interface SelloutRecord {
   store: string;
   items: SelloutItem[];
   total: number;
+  discount?: number;
   status: SelloutStatus;
   createdAt: string;
+  history?: string[];
 }
 
 export interface MovementItem {
@@ -44,6 +49,7 @@ export interface MovementRecord {
 export interface DailySpendItemRecord {
   id: string;
   date: string;
+  dateISO?: string;
   store: string;
   description: string;
   category: string;
@@ -55,7 +61,9 @@ export interface DailySpendItemRecord {
   salaryPeriod?: string;
   salaryPeriodType?: "Mingguan" | "Bulanan";
   total: number;
+  status?: "Approved" | "Pending";
   createdAt: string;
+  history?: string[];
 }
 
 export interface TradeRecord {
@@ -84,6 +92,17 @@ export function displayDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+  });
+}
+
+export function todayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function inputTime() {
+  return new Date().toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 

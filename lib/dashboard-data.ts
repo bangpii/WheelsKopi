@@ -99,7 +99,7 @@ export const compactRupiah = new Intl.NumberFormat("id-ID", {
 });
 
 /* ------------------------------------------------------------------ */
-/*  SEED HARIAN: TANGGAL 1 - 5 (HARI INI = TANGGAL 5)                 */
+/*  SEED HARIAN: TANGGAL 1 - 8                                        */
 /* ------------------------------------------------------------------ */
 
 const MONTH_LABELS = [
@@ -171,8 +171,74 @@ const PRODUCT_LOOKUP = new Map<string, SeedProduct>([
   ],
 ]);
 
-/* Urutan array: terbaru dulu (tanggal 5 -> 1) agar muncul di Transaksi Terbaru. */
+/* Urutan array: terbaru dulu (tanggal 8 -> 1) agar muncul di Transaksi Terbaru. */
 export const transactions: Transaction[] = [
+  {
+    id: "INV-D08-02",
+    customer: "Bengkel Jaya Motor",
+    items: 1,
+    total: 2950000,
+    status: "Lunas",
+    method: "QRIS",
+    time: "15:15",
+    tanggal: seedDate(8),
+    lines: [{ productId: "WK-9001", qty: 1 }],
+  },
+  {
+    id: "INV-D08-01",
+    customer: "Komunitas Velg Medan",
+    items: 2,
+    total: 3600000,
+    status: "Lunas",
+    method: "Transfer",
+    time: "10:30",
+    tanggal: seedDate(8),
+    lines: [{ productId: "WK-8002", qty: 2 }],
+  },
+  {
+    id: "INV-D07-02",
+    customer: "Pelanggan Umum",
+    items: 1,
+    total: 1050000,
+    status: "Lunas",
+    method: "Tunai",
+    time: "16:00",
+    tanggal: seedDate(7),
+    lines: [{ productId: "WK-8001", qty: 1 }],
+  },
+  {
+    id: "INV-D07-01",
+    customer: "CV Ban Sejahtera",
+    items: 1,
+    total: 2950000,
+    status: "Proses",
+    method: "QRIS",
+    time: "09:40",
+    tanggal: seedDate(7),
+    lines: [{ productId: "WK-9001", qty: 1 }],
+  },
+  {
+    id: "INV-D06-02",
+    customer: "Toko Maju Jaya",
+    items: 2,
+    total: 1100000,
+    status: "Lunas",
+    method: "Transfer",
+    time: "14:05",
+    tanggal: seedDate(6),
+    lines: [{ productId: "WK-9002", qty: 2 }],
+  },
+  {
+    id: "INV-D06-01",
+    customer: "Bengkel Sinar",
+    items: 3,
+    total: 3150000,
+    status: "Lunas",
+    method: "Tunai",
+    time: "10:20",
+    tanggal: seedDate(6),
+    lines: [{ productId: "WK-8001", qty: 3 }],
+  },
   {
     id: "INV-D05-02",
     customer: "CV Velg Nusantara",
@@ -294,8 +360,8 @@ function unitsOnDay(day: number): number {
     );
 }
 
-const dailyRevenue = [1, 2, 3, 4, 5].map(revenueOnDay);
-const dailyUnits = [1, 2, 3, 4, 5].map(unitsOnDay);
+const dailyRevenue = [1, 2, 3, 4, 5, 6, 7, 8].map(revenueOnDay);
+const dailyUnits = [1, 2, 3, 4, 5, 6, 7, 8].map(unitsOnDay);
 const SEED_TOTAL_REVENUE = totalRevenue(transactions);
 
 /* ------------------------------------------------------------------ */
@@ -511,7 +577,7 @@ export const kpis: Kpi[] = [
     value: rupiah.format(SEED_TOTAL_REVENUE),
     change: "+12,5%",
     trend: "up",
-    hint: "akumulasi tanggal 1-5",
+    hint: "akumulasi tanggal 1-8",
     spark: dailyRevenue,
   },
   {
@@ -519,7 +585,7 @@ export const kpis: Kpi[] = [
     value: totalUnits.toString(),
     change: "+8,2%",
     trend: "up",
-    hint: "unit tanggal 1-5",
+    hint: "unit tanggal 1-8",
     spark: dailyUnits,
   },
   {

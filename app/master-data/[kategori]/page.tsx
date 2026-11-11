@@ -14,6 +14,7 @@ import { AppShell } from "@/components/app-shell";
 import { RegisterProductModal } from "@/components/distribusi/register-product-modal";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData, type Product } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import type { DistribusiFormValues } from "@/lib/distribusi-data";
 import { formToItem } from "@/lib/distribusi-data";
 
@@ -28,12 +29,13 @@ function statusOf(stok: number) {
 function MasterDataContent() {
   const params = useParams();
   const router = useRouter();
-  
+
   const isBan = params.kategori === "ban";
   const categoryName = isBan ? "Ban" : "Others";
 
-  const { products, setProducts, stockItems, setStockItems, suppliers } = useData();
-  
+  const { products, setProducts, suppliers } = useData();
+  const can = useCan();
+
   const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
   const [editItem, setEditItem] = useState<Product | null>(null);
@@ -47,11 +49,11 @@ function MasterDataContent() {
 
   const filteredItems = products.filter((item) => {
     if (item.kategoriUtama !== categoryName) return false;
-    
+
     const keyword = search.trim().toLowerCase();
     const searchTarget = [
-      item.namaBarang, 
-      item.subKategori, 
+      item.namaBarang,
+      item.subKategori,
       item.supplier,
       item.merekBan,
       item.merekProduk,
@@ -76,7 +78,6 @@ function MasterDataContent() {
     const confirmed = window.confirm(`Hapus "${item.namaBarang}"?`);
     if (!confirmed) return;
     setProducts((prev) => prev.filter((entry) => entry.id !== item.id));
-    setStockItems(stockItems.filter((entry) => entry.id !== item.id));
     setNotice(`Data berhasil dihapus.`);
   };
 
@@ -152,7 +153,7 @@ function MasterDataContent() {
                   <th className="px-4 py-3.5 font-semibold">Spesifikasi</th>
                   <th className="px-4 py-3.5 text-right font-semibold">Stok</th>
                   <th className="px-4 py-3.5 text-center font-semibold">Status</th>
-                  
+
                   <th className="px-4 py-3.5 text-right font-semibold">Modal Asli</th>
                   <th className="px-4 py-3.5 text-right font-semibold">Harga Toko</th>
                   <th className="px-4 py-3.5 text-right font-semibold">GTY (Set)</th>
@@ -193,7 +194,7 @@ function MasterDataContent() {
                   filteredItems.map((item) => {
                     const stockStatus = statusOf(item.stok);
                     const statusClass = stockStatus === "Wajib Pesan" ? "bg-danger-soft text-danger" : stockStatus === "Menipis" ? "bg-warning-soft text-warning" : "bg-success-soft text-success";
-                    
+
                     let spec = "-";
                     if (item.kategoriUtama === "Ban") {
                       spec = `${item.ukuranTapak ?? ""}${item.ukuranTinggi ? `/${item.ukuranTinggi}` : ""} ${item.ring ?? ""}`.trim();
@@ -218,7 +219,7 @@ function MasterDataContent() {
                         <td className="px-4 py-3.5 text-center">
                           <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}>{stockStatus}</span>
                         </td>
-                        
+
                         <td className="px-4 py-3.5 text-right font-mono text-xs text-muted-foreground">{formatMoney(item.hargaModalAsli)}</td>
                         <td className="px-4 py-3.5 text-right font-mono text-xs text-primary font-semibold">{formatMoney(item.hargaModalToko)}</td>
                         <td className="px-4 py-3.5 text-right font-mono text-xs">{item.gtySet ?? "-"}</td>
@@ -249,20 +250,24 @@ function MasterDataContent() {
 
                         <td className="px-4 py-3.5 sticky right-0 bg-card z-10 sm:px-6">
                           <div className="flex justify-center gap-2">
-                            <button 
-                              onClick={() => setEditItem(item)} 
-                              className="p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary rounded-lg transition-colors"
-                              title="Edit Data"
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(item)} 
-                              className="p-2 text-muted-foreground hover:bg-danger-soft hover:text-danger rounded-lg transition-colors"
-                              title="Hapus Data"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
+                            {can("product", "edit") && (
+                              <button
+                                onClick={() => setEditItem(item)}
+                                className="p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary rounded-lg transition-colors"
+                                title="Edit Data"
+                              >
+                                <Pencil className="size-4" />
+                              </button>
+                            )}
+                            {can("product", "delete") && (
+                              <button
+                                onClick={() => handleDelete(item)}
+                                className="p-2 text-muted-foreground hover:bg-danger-soft hover:text-danger rounded-lg transition-colors"
+                                title="Hapus Data"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

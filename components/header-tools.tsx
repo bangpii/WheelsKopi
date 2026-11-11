@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, LogOut, Search } from "lucide-react";
 import { useData } from "@/lib/context/data-context";
+import { moduleForPath, useCan } from "@/lib/permissions";
+import { PAGE_RESULTS } from "@/lib/search-routes";
+import type { SearchPage } from "@/lib/search-routes";
 
 
 const STORE_EVENT = "wheelskopi-store-change";
@@ -29,6 +32,16 @@ function useStoredRaw(key: string): string | null {
       }
     },
     () => null,
+  );
+}
+
+const subscribeHydration = () => () => {};
+
+function useHydrated() {
+  return useSyncExternalStore(
+    subscribeHydration,
+    () => true,
+    () => false,
   );
 }
 
@@ -82,48 +95,12 @@ function useClickOutside(
 /* Pencarian global                                                    */
 /* ------------------------------------------------------------------ */
 
-interface SearchResult {
-  id: string;
-  group: string;
-  title: string;
-  subtitle: string;
-  href: string;
-}
-
-const PAGE_RESULTS: SearchResult[] = [
-  { id: "p-dashboard", group: "Halaman", title: "Dashboard", subtitle: "Ringkasan usaha", href: "/" },
-  { id: "p-distribusi", group: "Halaman", title: "Product Distributor", subtitle: "Stok gudang distributor", href: "/distribusi" },
-  { id: "p-products", group: "Halaman", title: "Product Store", subtitle: "Stok gudang distributor", href: "/distribusi" },
-  { id: "p-others", group: "Halaman", title: "Others", subtitle: "Master Management", href: "/others" },
-  { id: "p-stock", group: "Halaman", title: "Stock List", subtitle: "Master Management", href: "/stock-list" },
-  { id: "p-suppliers", group: "Halaman", title: "Supplier", subtitle: "Master Management", href: "/suppliers" },
-  { id: "p-stores", group: "Halaman", title: "Store", subtitle: "Master Management", href: "/stores" },
-  { id: "p-users", group: "Halaman", title: "User", subtitle: "Master Management", href: "/users" },
-  { id: "p-payments", group: "Halaman", title: "Payment", subtitle: "Master Management", href: "/payments" },
-  { id: "p-services", group: "Halaman", title: "Service", subtitle: "Master Management", href: "/services" },
-  { id: "p-cars", group: "Halaman", title: "Library Cars", subtitle: "Master Management", href: "/library-cars" },
-  { id: "p-communities", group: "Halaman", title: "Community", subtitle: "Master Management", href: "/communities" },
-  { id: "p-customers", group: "Halaman", title: "Customer", subtitle: "Master Management", href: "/customers" },
-  { id: "p-discounts", group: "Halaman", title: "Voucher & Discount", subtitle: "Master Management", href: "/discounts" },
-  { id: "p-permissions", group: "Halaman", title: "Role & Permission", subtitle: "Pengaturan hak akses", href: "/settings/permissions" },
-  { id: "p-po", group: "Halaman", title: "Purchase Orders", subtitle: "Transaction", href: "/purchase-orders" },
-  { id: "p-receipt", group: "Halaman", title: "Receipt PO", subtitle: "Transaction", href: "/transaction/receipt" },
-  { id: "p-sellout", group: "Halaman", title: "Sellout", subtitle: "Transaction", href: "/transaction/sellout" },
-  { id: "p-movement", group: "Halaman", title: "Movement", subtitle: "Transaction", href: "/transaction/movement" },
-  { id: "p-daily", group: "Halaman", title: "Daily Spend", subtitle: "Transaction", href: "/transaction/daily-spend" },
-  { id: "p-finance", group: "Halaman", title: "Finance Store", subtitle: "Transaction", href: "/finance-store" },
-  { id: "p-sellout-g", group: "Halaman", title: "Sellout Global", subtitle: "Transaction", href: "/transaction/sellout-global" },
-  { id: "p-daily-g", group: "Halaman", title: "Daily Spend Global", subtitle: "Transaction", href: "/transaction/daily-spend-global" },
-  { id: "p-r-sellout", group: "Halaman", title: "Report Sellout", subtitle: "Report", href: "/report/sellout" },
-  { id: "p-r-profit", group: "Halaman", title: "Report Profit", subtitle: "Report", href: "/report/profit" },
-  { id: "p-r-trade", group: "Halaman", title: "Trade Sellout", subtitle: "Report", href: "/report/trade-sellout" },
-];
-
 const MAX_RESULTS = 12;
 
 export function GlobalSearch() {
   const router = useRouter();
   const { products, customers, suppliers, stockItems, transactions } = useData();
+  const can = useCan();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
@@ -148,7 +125,7 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const index = useMemo<SearchResult[]>(() => {
+  const index = useMemo<SearchPage[]>(() => {
     const productResults = products.map((item) => ({
       id: `prod-${item.id}`,
       group: "Produk",
@@ -196,8 +173,12 @@ export function GlobalSearch() {
       ...customerResults,
       ...supplierResults,
       ...transactionResults,
-    ];
-  }, [products, customers, suppliers, stockItems, transactions]);
+    ].filter((entry) => {
+      const moduleId = moduleForPath(entry.href);
+
+      return !moduleId || can(moduleId, "view");
+    });
+  }, [products, customers, suppliers, stockItems, transactions, can]);
 
   const results = useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -215,7 +196,7 @@ export function GlobalSearch() {
       .slice(0, MAX_RESULTS);
   }, [index, query]);
 
-  const choose = (entry: SearchResult) => {
+  const choose = (entry: SearchPage) => {
     setOpen(false);
     setQuery("");
     if (document.activeElement instanceof HTMLElement) {
@@ -336,6 +317,7 @@ export function NotificationBell() {
   const router = useRouter();
   const { stockItems, transactions } = useData();
   const [open, setOpen] = useState(false);
+  const hydrated = useHydrated();
   const rawRead = useStoredRaw(READ_KEY);
   const readIds = useMemo(() => parseReadIds(rawRead), [rawRead]);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -394,7 +376,7 @@ export function NotificationBell() {
         className="relative flex size-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
       >
         <Bell className="size-[18px]" />
-        {unread.length > 0 && (
+        {hydrated && unread.length > 0 && (
           <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-primary ring-2 ring-card">
             <span className="absolute inset-0 rounded-full bg-primary soft-pulse" />
           </span>
@@ -473,8 +455,8 @@ interface Profile {
 }
 
 const DEFAULT_PROFILE: Profile = {
-  name: "Admin Wheels",
-  role: "Administrator",
+  name: "Kepala Toko",
+  role: "Kepala Toko",
   photo: "",
 };
 
@@ -494,7 +476,10 @@ function parseProfile(raw: string | null): Profile {
 
     return {
       name: session.name || DEFAULT_PROFILE.name,
-      role: session.role || DEFAULT_PROFILE.role,
+      role:
+        session.role === "Administrator"
+          ? "Kepala Toko"
+          : session.role || DEFAULT_PROFILE.role,
       photo: session.photo || session.fotoKtp || "",
     };
   } catch {

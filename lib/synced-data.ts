@@ -1,4 +1,4 @@
-import type { Transaction } from "./dashboard-data";
+import type { PaymentMethod, Transaction } from "./dashboard-data";
 import { transactions as seedTransactions } from "./dashboard-data";
 import { initialDistribusiItems } from "./distribusi-data";
 import { storeNames } from "./master-data";
@@ -102,6 +102,18 @@ export const seedSellouts: SelloutRecord[] = seedTransactions.map(
   selloutRecord,
 );
 
+function normalizePaymentMethod(method?: string): PaymentMethod {
+  const value = (method ?? "").toLowerCase();
+
+  if (value.includes("qris") || value.includes("shopee") || value.includes("ovo")) {
+    return "QRIS";
+  }
+  if (value.includes("cash") || value.includes("tunai")) {
+    return "Tunai";
+  }
+  return "Transfer";
+}
+
 export function selloutToTransaction(row: SelloutRecord): Transaction {
   const items = row.items.reduce((sum, item) => sum + item.qty, 0);
 
@@ -111,7 +123,7 @@ export function selloutToTransaction(row: SelloutRecord): Transaction {
     items,
     total: row.total,
     status: row.status === "Sudah Invoice" ? "Lunas" : "Proses",
-    method: row.paymentMethod ?? "Transfer",
+    method: normalizePaymentMethod(row.paymentMethod),
     time: row.time ?? "09:00",
     tanggal: row.dateISO ?? row.date,
     date: row.dateISO ?? row.date,

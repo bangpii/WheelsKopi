@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Plus, Wallet, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import { rupiah } from "@/lib/dashboard-data";
-import { storeNames } from "@/lib/master-data";
+import { dailySpendFinanceEntry, upsertFinanceLedger } from "@/lib/integration";
 import {
   displayDate,
   todayInputDate,
@@ -42,7 +43,7 @@ interface SpendForm {
 
 const emptyForm: SpendForm = {
   date: "",
-  store: storeNames[0],
+  store: "",
   description: "",
   category: "Operasional",
   amount: "0",
@@ -75,7 +76,10 @@ export default function DailySpendPage() {
     users,
     dailySpends: records,
     setDailySpends: setRecords,
+    setFinanceStores,
+    storeNames,
   } = useData();
+  const can = useCan();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<SpendForm>(emptyForm);
   const [error, setError] = useState("");
@@ -99,7 +103,11 @@ export default function DailySpendPage() {
   const total = amount + salary - spooringCut;
 
   const openCreate = () => {
-    setForm({ ...emptyForm, date: todayInputDate() });
+    setForm({
+      ...emptyForm,
+      date: todayInputDate(),
+      store: storeNames[0] ?? "",
+    });
     setError("");
     setIsOpen(true);
   };
@@ -159,6 +167,15 @@ export default function DailySpendPage() {
 
     const next = [record, ...records];
     setRecords(next);
+    setFinanceStores((current) =>
+      upsertFinanceLedger(current, {
+        store: record.store,
+        date: record.date,
+        entries: [
+          dailySpendFinanceEntry(record.id, record.description, record.total),
+        ],
+      }),
+    );
     setIsOpen(false);
   };
 
@@ -178,14 +195,16 @@ export default function DailySpendPage() {
               transaksi spooring pada hari tersebut, lalu ditambah gaji jika ada.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Tambah Daily Spend
-          </button>
+          {can("daily-spend", "input") && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              <Plus className="size-4" />
+              Tambah Daily Spend
+            </button>
+          )}
         </header>
 
         <div className="surface overflow-hidden">

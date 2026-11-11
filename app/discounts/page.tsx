@@ -11,11 +11,9 @@ import {
   X,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { stores } from "@/lib/master-data";
-import {
-  discounts as demoDiscounts,
-  type DiscountRecord,
-} from "@/lib/warehouse-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
+import type { DiscountRecord } from "@/lib/warehouse-data";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -57,7 +55,7 @@ interface DiscountForm {
 
 const emptyForm: DiscountForm = {
   code: "",
-  store: stores[0].storeName,
+  store: "",
   discountPercent: 10,
   maxCut: 100_000,
   limit: 5,
@@ -67,7 +65,8 @@ const emptyForm: DiscountForm = {
 };
 
 export default function DiscountsPage() {
-  const [discounts, setDiscounts] = useState<DiscountRecord[]>(demoDiscounts);
+  const { discounts, setDiscounts, storeNames } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState<DiscountRecord | null>(null);
@@ -91,6 +90,7 @@ export default function DiscountsPage() {
     setEditing(null);
     setForm({
       ...emptyForm,
+      store: storeNames[0] ?? "",
       code: `KKW${String(discounts.length + 1).padStart(2, "0")}`,
     });
     setIsOpen(true);
@@ -175,14 +175,16 @@ export default function DiscountsPage() {
         </header>
 
         <div className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-          >
-            <Plus className="size-4" />
-            Create Discount
-          </button>
+          {can("discount", "input") && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Create Discount
+            </button>
+          )}
           <div className="relative w-full sm:w-80">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -287,22 +289,26 @@ export default function DiscountsPage() {
                         </td>
                         <td className={`${tdClass} text-center`}>
                           <div className="flex justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEdit(discount)}
-                              className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20"
-                              title="Edit"
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(discount)}
-                              className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20"
-                              title="Hapus"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
+                            {can("discount", "edit") && (
+                              <button
+                                type="button"
+                                onClick={() => openEdit(discount)}
+                                className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20"
+                                title="Edit"
+                              >
+                                <Pencil className="size-4" />
+                              </button>
+                            )}
+                            {can("discount", "delete") && (
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(discount)}
+                                className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20"
+                                title="Hapus"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -355,8 +361,8 @@ export default function DiscountsPage() {
                     }
                     className={fieldClass}
                   >
-                    {stores.map((store) => (
-                      <option key={store.id}>{store.storeName}</option>
+                    {storeNames.map((store) => (
+                      <option key={store}>{store}</option>
                     ))}
                   </select>
                 </label>

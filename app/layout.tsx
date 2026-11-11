@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist_Mono, Inter, Poppins } from "next/font/google";
+import { AuthGate } from "../components/auth-gate";
 import { DataProvider } from "@/lib/context/data-context";
 import "./globals.css";
 
@@ -20,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WheelsKopi | Dashboard Administrator ERP",
+  title: "WheelsKopi | Dashboard Kepala Toko ERP",
   description:
     "Sistem ERP WheelsKopi untuk manajemen stok ban, penjualan, transaksi, pelanggan dan supplier.",
 };
@@ -50,7 +52,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full bg-background font-sans text-foreground">
-        <DataProvider>{children}</DataProvider>
+        <DataProvider>
+          <Suspense fallback={<div className="min-h-screen bg-background" />}>
+            <AuthGate>{children}</AuthGate>
+          </Suspense>
+        </DataProvider>
       </body>
     </html>
   );

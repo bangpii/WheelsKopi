@@ -5,6 +5,7 @@ import { CheckCircle2, ClipboardCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 const thClass =
   "whitespace-nowrap border-b border-border px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground";
@@ -13,6 +14,7 @@ const tdClass = "whitespace-nowrap border-b border-border/70 px-4 py-3 text-sm";
 
 export default function WorkPage() {
   const { sellouts: records, setSellouts: setRecords } = useData();
+  const can = useCan();
   const [tab, setTab] = useState<"Menunggu Approval" | "Siap Invoice">(
     "Menunggu Approval",
   );
@@ -129,14 +131,18 @@ export default function WorkPage() {
                       </td>
                       <td className={`${tdClass} text-center`}>
                         {row.status === "Menunggu Approval" ? (
-                          <button
-                            type="button"
-                            onClick={() => approve(row.id)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-success-soft px-2.5 py-1.5 text-xs font-semibold text-success"
-                          >
-                            <CheckCircle2 className="size-3.5" />
-                            Approve
-                          </button>
+                          can("sellout", "edit") ? (
+                            <button
+                              type="button"
+                              onClick={() => approve(row.id)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-success-soft px-2.5 py-1.5 text-xs font-semibold text-success"
+                            >
+                              <CheckCircle2 className="size-3.5" />
+                              Approve
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Menunggu</span>
+                          )
                         ) : (
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                             <ClipboardCheck className="size-3.5" />

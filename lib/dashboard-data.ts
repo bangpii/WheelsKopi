@@ -540,32 +540,7 @@ export const categorySlices: CategorySlice[] = [
 /*  SUPPLIER                                                          */
 /* ------------------------------------------------------------------ */
 
-export const suppliers: Supplier[] = [
-  {
-    name: "PT Michelin Indonesia",
-    brand: "Michelin",
-    leadTime: "3-5 hari",
-    status: "Aktif",
-  },
-  {
-    name: "PT Bridgestone Tire",
-    brand: "Bridgestone",
-    leadTime: "3-5 hari",
-    status: "Aktif",
-  },
-  {
-    name: "CV Mitra Ban Sejahtera",
-    brand: "GT Radial",
-    leadTime: "3-5 hari",
-    status: "Aktif",
-  },
-  {
-    name: "CV Velg Nusantara",
-    brand: "SSW",
-    leadTime: "3-5 hari",
-    status: "Aktif",
-  },
-];
+export const suppliers: Supplier[] = [];
 
 /* ------------------------------------------------------------------ */
 /*  KPI, TARGET, & GRAFIK BULANAN                                     */

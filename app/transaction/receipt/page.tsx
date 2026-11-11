@@ -3,9 +3,15 @@
 import { useState } from "react";
 import { Eye, Plus, Printer, ReceiptText, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { purchaseOrders } from "@/lib/operations-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
+import {
+  applyPurchaseOrderToStock,
+  purchaseFinanceEntry,
+  upsertFinanceLedger,
+} from "@/lib/integration";
 import { todayInputDate } from "@/lib/transaction-data";
-import { receiptPOs as demoReceipts, type ReceiptPORecord } from "@/lib/warehouse-data";
+import type { ReceiptPORecord } from "@/lib/warehouse-data";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -16,7 +22,15 @@ const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-ring/30";
 
 export default function ReceiptPurchaseOrderPage() {
-  const [receipts, setReceipts] = useState<ReceiptPORecord[]>(demoReceipts);
+  const {
+    purchaseOrders,
+    setPurchaseOrders,
+    receipts,
+    setReceipts,
+    setProducts,
+    setFinanceStores,
+  } = useData();
+  const can = useCan();
   const [isOpen, setIsOpen] = useState(false);
   const [viewing, setViewing] = useState<ReceiptPORecord | null>(null);
 
@@ -31,18 +45,34 @@ export default function ReceiptPurchaseOrderPage() {
   const handleCreate = (event: React.FormEvent) => {
     event.preventDefault();
 
-    setReceipts([
-      {
-        id: `RCP-${Date.now()}`,
-        number: form.number,
-        poNumber: form.poNumber,
-        supplier: form.supplier,
-        address: form.address,
-        date: new Date(form.date).toLocaleDateString("id-ID"),
-        status: "Completed",
-      },
-      ...receipts,
-    ]);
+    const receipt: ReceiptPORecord = {
+      id: `RCP-${Date.now()}`,
+      number: form.number,
+      poNumber: form.poNumber,
+      supplier: form.supplier,
+      address: form.address,
+      date: new Date(form.date).toLocaleDateString("id-ID"),
+      status: "Completed",
+    };
+
+    setReceipts([receipt, ...receipts]);
+
+    const order = purchaseOrders.find((entry) => entry.number === form.poNumber);
+    if (order && !order.received) {
+      const received = { ...order, status: "Completed" as const, received: true };
+      setPurchaseOrders((current) =>
+        current.map((entry) => (entry.id === order.id ? received : entry)),
+      );
+      setProducts((current) => applyPurchaseOrderToStock(current, received));
+      setFinanceStores((current) =>
+        upsertFinanceLedger(current, {
+          store: received.deliverTo,
+          date: received.date,
+          entries: [purchaseFinanceEntry(received)],
+        }),
+      );
+    }
+
     setIsOpen(false);
   };
 
@@ -52,6 +82,7 @@ export default function ReceiptPurchaseOrderPage() {
       ...current,
       poNumber,
       supplier: order?.supplier ?? current.supplier,
+      address: order?.deliverTo ?? current.address,
       number: current.number || `RCP-${poNumber.replace("PO-", "")}`,
     }));
   };
@@ -67,17 +98,19 @@ export default function ReceiptPurchaseOrderPage() {
               Buat tanda terima untuk PO yang sudah dibayar, lengkap dengan nomor receipt dan status completed.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setForm({ number: "", poNumber: "", supplier: "", address: "", date: todayInputDate() });
-              setIsOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-          >
-            <Plus className="size-4" />
-            Create Receipt PO
-          </button>
+          {can("receipt", "input") && (
+            <button
+              type="button"
+              onClick={() => {
+                setForm({ number: "", poNumber: "", supplier: "", address: "", date: todayInputDate() });
+                setIsOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Create Receipt PO
+            </button>
+          )}
         </header>
 
         <div className="surface overflow-hidden">

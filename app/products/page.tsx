@@ -14,7 +14,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { checkPermission } from "@/lib/check-permission";
+import { useCan } from "@/lib/permissions";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData, type Product } from "@/lib/context/data-context";
 
@@ -26,12 +26,15 @@ function statusOf(stok: number) {
 }
 
 export default function ProductsPage() {
-  const { products, setProducts, stockItems, setStockItems } = useData();
+  const { products, setProducts } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [mounted, setMounted] = useState(false);
   
-  const canDelete = checkPermission("product", "delete");
+  const canDelete = can("product", "delete");
+  const canEdit = can("product", "edit");
+  const canInput = can("product", "input");
 
   // Perbaikan Hydration Error
   useEffect(() => {
@@ -46,7 +49,6 @@ export default function ProductsPage() {
     if (!confirmed) return;
 
     setProducts(products.filter((entry) => entry.id !== product.id));
-    setStockItems(stockItems.filter((entry) => entry.id !== product.id));
   };
 
   const keyword = search.trim().toLowerCase();
@@ -86,13 +88,15 @@ export default function ProductsPage() {
               Daftar inventaris produk lengkap dengan gambar, spesifikasi, dan riwayat.
             </p>
           </div>
-          <Link
-            href="/distribusi"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5"
-          >
-            <Plus className="size-4" />
-            Tambah Produk
-          </Link>
+          {canInput && (
+            <Link
+              href="/distribusi"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Tambah Produk
+            </Link>
+          )}
         </header>
 
         <div className="inline-flex rounded-xl border border-border bg-card p-1 text-sm font-medium">
@@ -252,13 +256,15 @@ export default function ProductsPage() {
                             >
                               <Eye className="size-4" />
                             </button>
-                            <Link
-                              href={`/distribusi`}
-                              title="Edit Produk"
-                              className="rounded-xl border border-transparent p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
-                            >
-                              <Pencil className="size-4" />
-                            </Link>
+                            {canEdit && (
+                              <Link
+                                href={`/distribusi`}
+                                title="Edit Produk"
+                                className="rounded-xl border border-transparent p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
+                              >
+                                <Pencil className="size-4" />
+                              </Link>
+                            )}
                             {canDelete && (
                               <button
                                 type="button"

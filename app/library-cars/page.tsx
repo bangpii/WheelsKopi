@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2, X, Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { libraryCars as demoCars } from "@/lib/master-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 interface CarData {
   id: string;
@@ -20,7 +21,8 @@ interface CarData {
 
 export default function LibraryCarsPage() {
   // PERBAIKAN: Gunakan array kosong jika initialCars tidak ada
-  const [cars, setCars] = useState<CarData[]>(demoCars);
+  const { libraryCars: cars, setLibraryCars: setCars } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,9 +124,11 @@ export default function LibraryCarsPage() {
         {/* ACTION BAR */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           <div className="flex gap-2">
-            <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">
-              <Plus className="size-4" /> Create
-            </button>
+            {can("library", "input") && (
+              <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">
+                <Plus className="size-4" /> Create
+              </button>
+            )}
             <button className="flex items-center gap-2 rounded-lg border border-primary bg-background px-4 py-2 text-sm font-medium text-primary hover:bg-primary-soft transition-colors">
               <Search className="size-4" /> Search Detail
             </button>
@@ -164,12 +168,16 @@ export default function LibraryCarsPage() {
                     <td className="px-4 py-4 align-top border-l border-border/50">{renderMultiline(c.sizeVelg)}</td>
                     <td className="px-4 py-4 align-top">
                       <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEditClick(c)} className="rounded bg-green-500 p-1.5 text-white hover:bg-green-600 transition-colors" title="Edit">
-                          <Edit className="size-4" />
-                        </button>
-                        <button onClick={() => handleDelete(c.id)} className="rounded bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors" title="Hapus">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("library", "edit") && (
+                          <button onClick={() => handleEditClick(c)} className="rounded bg-green-500 p-1.5 text-white hover:bg-green-600 transition-colors" title="Edit">
+                            <Edit className="size-4" />
+                          </button>
+                        )}
+                        {can("library", "delete") && (
+                          <button onClick={() => handleDelete(c.id)} className="rounded bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors" title="Hapus">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

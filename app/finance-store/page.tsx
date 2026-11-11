@@ -15,13 +15,13 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import {
   LEDGER_TYPE_LABEL,
   createLedgerEntry,
   ledgerFromRecord,
   ledgerTotals,
 } from "@/lib/finance-store";
-import { storeNames } from "@/lib/master-data";
 import {
   displayDate,
   todayInputDate,
@@ -53,8 +53,8 @@ interface FinanceForm {
   ledger: LedgerFormEntry[];
 }
 
-const emptyForm = (): FinanceForm => ({
-  store: storeNames[0],
+const emptyForm = (defaultStore: string): FinanceForm => ({
+  store: defaultStore,
   date: todayInputDate(),
   ledger: [
     {
@@ -83,14 +83,19 @@ function formToLedger(entries: LedgerFormEntry[]): FinanceLedgerEntry[] {
 const ledgerTypes = Object.keys(LEDGER_TYPE_LABEL) as FinanceLedgerType[];
 
 export default function FinanceStorePage() {
-  const { financeStores: records, setFinanceStores: update } = useData();
+  const {
+    financeStores: records,
+    setFinanceStores: update,
+    storeNames,
+  } = useData();
+  const can = useCan();
   const [store, setStore] = useState("Semua Store");
   const [date, setDate] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<FinanceStoreDayRecord | null>(null);
   const [detail, setDetail] = useState<FinanceStoreDayRecord | null>(null);
   const [form, setForm] = useState<FinanceForm>({
-    store: storeNames[0],
+    store: "",
     date: "",
     ledger: [],
   });
@@ -135,7 +140,7 @@ export default function FinanceStorePage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyForm(storeNames[0] ?? ""));
     setError("");
     setIsOpen(true);
   };
@@ -291,14 +296,16 @@ export default function FinanceStorePage() {
               disimpan sebagai ledger, lalu dikunci saat hari ditutup.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Create Finance Store
-          </button>
+          {can("finance-store", "input") && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              <Plus className="size-4" />
+              Create Finance Store
+            </button>
+          )}
         </header>
 
         <div className="surface flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -466,28 +473,32 @@ export default function FinanceStorePage() {
                           >
                             <Eye className="size-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(row)}
-                            disabled={row.status === "Closed"}
-                            className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20 disabled:opacity-40"
-                            title={
-                              row.status === "Closed"
-                                ? "Transaksi sudah ditutup"
-                                : "Edit"
-                            }
-                          >
-                            <Pencil className="size-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => closeDay(row)}
-                            disabled={row.status === "Closed"}
-                            className="rounded-lg bg-muted p-2 text-muted-foreground hover:text-foreground disabled:opacity-40"
-                            title="Close transaksi"
-                          >
-                            <Lock className="size-4" />
-                          </button>
+                          {can("finance-store", "edit") && (
+                            <button
+                              type="button"
+                              onClick={() => openEdit(row)}
+                              disabled={row.status === "Closed"}
+                              className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20 disabled:opacity-40"
+                              title={
+                                row.status === "Closed"
+                                  ? "Transaksi sudah ditutup"
+                                  : "Edit"
+                              }
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                          )}
+                          {can("finance-store", "edit") && (
+                            <button
+                              type="button"
+                              onClick={() => closeDay(row)}
+                              disabled={row.status === "Closed"}
+                              className="rounded-lg bg-muted p-2 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                              title="Close transaksi"
+                            >
+                              <Lock className="size-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => window.print()}

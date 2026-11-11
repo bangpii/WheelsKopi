@@ -16,7 +16,8 @@ export interface SelloutRecord {
   date: string;
   dateISO?: string;
   time?: string;
-  paymentMethod?: "Transfer" | "QRIS" | "Tunai";
+  /** Nama metode pembayaran, mengikuti master Payments. */
+  paymentMethod?: string;
   customer: string;
   description: string;
   car: string;
@@ -26,6 +27,9 @@ export interface SelloutRecord {
   total: number;
   discount?: number;
   status: SelloutStatus;
+  mechanicStatus?: "Menunggu" | "Dikerjakan" | "Selesai";
+  mechanicStartedAt?: string;
+  mechanicFinishedAt?: string;
   createdAt: string;
   history?: string[];
 }
@@ -77,10 +81,10 @@ export interface TradeRecord {
   status: "Available" | "Sold";
 }
 
-export const SELLOUT_STORAGE_KEY = "wheelskopi-sellouts";
-export const MOVEMENT_STORAGE_KEY = "wheelskopi-movements";
-export const DAILY_SPEND_STORAGE_KEY = "wheelskopi-daily-spends";
-export const TRADE_STORAGE_KEY = "wheelskopi-trade-sellouts";
+export const SELLOUT_STORAGE_KEY = "wheelskopi_v5_sellouts";
+export const MOVEMENT_STORAGE_KEY = "wheelskopi_v5_movements";
+export const DAILY_SPEND_STORAGE_KEY = "wheelskopi_v5_daily_spends";
+export const TRADE_STORAGE_KEY = "wheelskopi_v5_trade_sellouts";
 
 export function displayDate(value: string) {
   if (!value) return "-";
@@ -156,4 +160,4 @@ export interface FinanceStoreDayRecord {
   snapshot?: FinanceStoreSnapshot;
 }
 
-export const FINANCE_STORE_STORAGE_KEY = "wheelskopi-finance-stores";
+export const FINANCE_STORE_STORAGE_KEY = "wheelskopi_v5_finance_stores";

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowRightLeft, Plus, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
-import { storeNames } from "@/lib/master-data";
+import { useCan } from "@/lib/permissions";
 import {
   displayDate,
   todayInputDate,
@@ -32,13 +32,15 @@ export default function MovementPage() {
     products,
     movements: records,
     setMovements: setRecords,
+    storeNames,
   } = useData();
+  const can = useCan();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<MovementForm>({
     number: "",
     date: "",
-    sourceStore: storeNames[0],
-    destinationStore: storeNames[1] ?? storeNames[0],
+    sourceStore: "",
+    destinationStore: "",
   });
   const [items, setItems] = useState<MovementItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -127,14 +129,16 @@ export default function MovementPage() {
               diambil dari inventory.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Buat Movement
-          </button>
+          {can("movement", "input") && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              <Plus className="size-4" />
+              Buat Movement
+            </button>
+          )}
         </header>
 
         <div className="surface overflow-hidden">

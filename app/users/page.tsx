@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
-import { stores } from "@/lib/master-data";
+import { useCan, useIsAdministrator } from "@/lib/permissions";
+import { ADMIN_ROLE } from "@/lib/auth";
 import type { UserRecord as User } from "@/lib/master-data";
 
 interface UserFormData {
@@ -33,7 +34,9 @@ interface UserFormData {
 }
 
 export default function UsersPage() {
-  const { roles, setRoles, users, setUsers } = useData();
+  const { roles, setRoles, users, setUsers, storeNames } = useData();
+  const can = useCan();
+  const isAdministrator = useIsAdministrator();
   const [search, setSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,7 +49,7 @@ export default function UsersPage() {
     password: "",
     role: "",
     phone: "",
-    store: stores[0].storeName,
+    store: storeNames[0] ?? "",
     fotoKtp: "",
     status: "Aktif",
     gajiPokok: "0",
@@ -66,7 +69,7 @@ export default function UsersPage() {
       password: "",
       role: roles[0] || "",
       phone: "",
-      store: stores[0].storeName,
+      store: storeNames[0] ?? "",
       fotoKtp: "",
       status: "Aktif",
       gajiPokok: "0",
@@ -85,7 +88,7 @@ export default function UsersPage() {
       password: "",
       role: user.role,
       phone: user.phone,
-      store: user.store ?? stores[0].storeName,
+      store: user.store ?? storeNames[0] ?? "",
       fotoKtp: user.fotoKtp,
       status: user.status,
       gajiPokok: String(user.gajiPokok ?? 0),
@@ -150,6 +153,12 @@ export default function UsersPage() {
   };
 
   const handleDeleteRole = (roleToDelete: string) => {
+    if (roleToDelete === ADMIN_ROLE) {
+      alert("Role Kepala Toko tidak bisa dihapus.");
+
+      return;
+    }
+
     const isUsed = users.some((u) => u.role === roleToDelete);
 
     if (isUsed) {
@@ -173,6 +182,8 @@ export default function UsersPage() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
+      case "Kepala Toko":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800";
       case "Finance":
         return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800";
       case "Admin Kantor":
@@ -198,18 +209,22 @@ export default function UsersPage() {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           <div className="flex gap-2">
-            <button
-              onClick={handleAddClick}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="size-4" /> Create User
-            </button>
-            <button
-              onClick={() => setIsRoleModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-            >
-              <Settings className="size-4" /> Kelola Role
-            </button>
+            {can("user", "input") && (
+              <button
+                onClick={handleAddClick}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="size-4" /> Create User
+              </button>
+            )}
+            {isAdministrator && (
+              <button
+                onClick={() => setIsRoleModalOpen(true)}
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                <Settings className="size-4" /> Kelola Role
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-sm">
@@ -302,7 +317,8 @@ export default function UsersPage() {
                     <td className="px-5 py-4 text-center">
                       <button
                         onClick={() => handleToggleStatus(user.id)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${user.status === "Aktif" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+                        disabled={!can("user", "edit")}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${user.status === "Aktif" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
                       >
                         {user.status === "Aktif" ? (
                           <CheckCircle2 className="size-3" />
@@ -314,18 +330,22 @@ export default function UsersPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEditClick(user)}
-                          className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors"
-                        >
-                          <Edit className="size-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 transition-colors dark:text-red-400"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("user", "edit") && (
+                          <button
+                            onClick={() => handleEditClick(user)}
+                            className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            <Edit className="size-4" />
+                          </button>
+                        )}
+                        {can("user", "delete") && (
+                          <button
+                            onClick={() => handleDelete(user.id)}
+                            className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 transition-colors dark:text-red-400"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -444,9 +464,9 @@ export default function UsersPage() {
                   }
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-primary outline-none"
                 >
-                  {stores.map((store) => (
-                    <option key={store.id} value={store.storeName}>
-                      {store.storeName}
+                  {storeNames.map((store) => (
+                    <option key={store} value={store}>
+                      {store}
                     </option>
                   ))}
                 </select>

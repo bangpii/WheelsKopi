@@ -32,6 +32,7 @@ import type {
 } from "@/lib/distribusi-data";
 // IMPORT DIPERBAIKI: Hapus getStockStatusInfo
 import { formToItem, othersCategories } from "@/lib/distribusi-data";
+import { useCan } from "@/lib/permissions";
 
 const statusOptions = ["Semua Status Stok", "Tersedia", "Menipis", "Wajib Pesan"];
 
@@ -109,7 +110,8 @@ function DistribusiContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") === "others" ? "Others" : "Ban";
 
-  const { products, setProducts, stockItems, setStockItems, suppliers } = useData();
+  const { products, setProducts, suppliers } = useData();
+  const can = useCan();
 
   const [category, setCategory] = useState<DistribusiCategory>(initialTab);
   const [search, setSearch] = useState("");
@@ -296,7 +298,6 @@ function DistribusiContent() {
     if (!confirmed) return;
 
     setProducts((prev) => prev.filter((entry) => entry.id !== item.id));
-    setStockItems(stockItems.filter((entry) => entry.id !== item.id));
     setNotice(`Produk "${item.namaBarang}" telah dihapus.`);
   };
 
@@ -505,17 +506,19 @@ function DistribusiContent() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEditItem(null);
-                setRegisterOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <Plus className="size-4" />
-              Register Produk Baru
-            </button>
+            {can("distribusi", "input") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditItem(null);
+                  setRegisterOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)] transition-transform hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <Plus className="size-4" />
+                Register Produk Baru
+              </button>
+            )}
           </div>
         </header>
 
@@ -526,17 +529,19 @@ function DistribusiContent() {
                 <Box className="size-4" />
                 Product Distributor
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditItem(null);
-                  setRegisterOpen(true);
-                }}
-                className="flex items-center gap-2 border-b-2 border-transparent px-4 py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-5"
-              >
-                <Plus className="size-4" />
-                Register Produk Baru
-              </button>
+              {can("distribusi", "input") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditItem(null);
+                    setRegisterOpen(true);
+                  }}
+                  className="flex items-center gap-2 border-b-2 border-transparent px-4 py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:px-5"
+                >
+                  <Plus className="size-4" />
+                  Register Produk Baru
+                </button>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -665,14 +670,16 @@ function DistribusiContent() {
                 className="hidden"
                 onChange={handleImportFile}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3.5 py-2.5 text-xs font-semibold transition-colors hover:bg-muted"
-              >
-                <Upload className="size-4" />
-                Import CSV
-              </button>
+              {can("distribusi", "input") && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3.5 py-2.5 text-xs font-semibold transition-colors hover:bg-muted"
+                >
+                  <Upload className="size-4" />
+                  Import CSV
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleExportExcel}
@@ -757,17 +764,19 @@ function DistribusiContent() {
                             Tambahkan produk baru lewat form register, atau import dari file CSV.
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditItem(null);
-                            setRegisterOpen(true);
-                          }}
-                          className="mt-1 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
-                        >
-                          <Plus className="size-3.5" />
-                          Register Produk Baru
-                        </button>
+                        {can("distribusi", "input") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditItem(null);
+                              setRegisterOpen(true);
+                            }}
+                            className="mt-1 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+                          >
+                            <Plus className="size-3.5" />
+                            Register Produk Baru
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -884,20 +893,24 @@ function DistribusiContent() {
                             >
                               <Eye className="size-4" />
                             </button>
-                            <button
-                              onClick={() => openEdit(item)}
-                              className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
-                              title="Edit Produk"
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item)}
-                              className="rounded-xl p-2 text-muted-foreground transition-colors hover:border-danger/20 hover:bg-danger-soft hover:text-danger"
-                              title="Hapus Produk"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
+                            {can("distribusi", "edit") && (
+                              <button
+                                onClick={() => openEdit(item)}
+                                className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
+                                title="Edit Produk"
+                              >
+                                <Pencil className="size-4" />
+                              </button>
+                            )}
+                            {can("distribusi", "delete") && (
+                              <button
+                                onClick={() => handleDelete(item)}
+                                className="rounded-xl p-2 text-muted-foreground transition-colors hover:border-danger/20 hover:bg-danger-soft hover:text-danger"
+                                title="Hapus Produk"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

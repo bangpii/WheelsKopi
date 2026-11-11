@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2, X, History, Wrench } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { services as demoServices } from "@/lib/master-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 interface Service {
   id: string;
@@ -15,7 +16,8 @@ interface Service {
 
 export default function ServicesPage() {
   // PERBAIKAN: Gunakan array kosong jika initialServices tidak ada
-  const [services, setServices] = useState<Service[]>(demoServices);
+  const { services, setServices } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -90,9 +92,11 @@ export default function ServicesPage() {
 
         {/* ACTION BAR */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
-          <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">
-            <Plus className="size-4" /> Create
-          </button>
+          {can("service", "input") && (
+            <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">
+              <Plus className="size-4" /> Create
+            </button>
+          )}
           
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Search:</span>
@@ -124,15 +128,19 @@ export default function ServicesPage() {
                     <td className="px-5 py-4 text-xs text-muted-foreground">{s.createdAt}</td>
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEditClick(s)} className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 transition-colors" title="Edit">
-                          <Edit className="size-4" />
-                        </button>
+                        {can("service", "edit") && (
+                          <button onClick={() => handleEditClick(s)} className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 transition-colors" title="Edit">
+                            <Edit className="size-4" />
+                          </button>
+                        )}
                         <button onClick={() => setViewService(s)} className="rounded-lg bg-yellow-500 p-1.5 text-white hover:bg-yellow-600 transition-colors" title="History">
                           <History className="size-4" />
                         </button>
-                        <button onClick={() => handleDelete(s.id)} className="rounded-lg bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors" title="Hapus">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("service", "delete") && (
+                          <button onClick={() => handleDelete(s.id)} className="rounded-lg bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors" title="Hapus">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

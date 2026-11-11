@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2, X, History, CreditCard } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { payments as demoPayments } from "@/lib/master-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 interface PaymentMethod {
   id: string;
@@ -19,7 +20,8 @@ interface PaymentFormData {
 }
 
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState<PaymentMethod[]>(demoPayments);
+  const { payments, setPayments } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -93,9 +95,11 @@ export default function PaymentsPage() {
 
         {/* ACTION BAR */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
-          <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-            <Plus className="size-4" /> Tambah Payment
-          </button>
+          {can("payment", "input") && (
+            <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Plus className="size-4" /> Tambah Payment
+            </button>
+          )}
           
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Cari:</span>
@@ -129,9 +133,13 @@ export default function PaymentsPage() {
                     <td className="px-5 py-4 text-xs text-muted-foreground">{p.createdAt}</td>
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEditClick(p)} className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Edit className="size-4" /></button>
+                        {can("payment", "edit") && (
+                          <button onClick={() => handleEditClick(p)} className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Edit className="size-4" /></button>
+                        )}
                         <button onClick={() => setViewPayment(p)} className="rounded-lg bg-yellow-500/10 p-2 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400 transition-colors" title="Lihat History"><History className="size-4" /></button>
-                        <button onClick={() => handleDelete(p.id)} className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 dark:text-red-400 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
+                        {can("payment", "delete") && (
+                          <button onClick={() => handleDelete(p.id)} className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 dark:text-red-400 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
+                        )}
                       </div>
                     </td>
                   </tr>

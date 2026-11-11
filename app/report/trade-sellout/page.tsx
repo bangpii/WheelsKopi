@@ -5,7 +5,7 @@ import { Plus, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData } from "@/lib/context/data-context";
-import { storeNames } from "@/lib/master-data";
+import { useCan } from "@/lib/permissions";
 import {
   displayDate,
   todayInputDate,
@@ -31,7 +31,7 @@ interface TradeForm {
 }
 
 const emptyForm: TradeForm = {
-  store: storeNames[0],
+  store: "",
   date: "",
   bonNumber: "",
   product: "",
@@ -41,7 +41,12 @@ const emptyForm: TradeForm = {
 };
 
 export default function TradeSelloutPage() {
-  const { trades: records, setTrades: setRecords } = useData();
+  const {
+    trades: records,
+    setTrades: setRecords,
+    storeNames,
+  } = useData();
+  const can = useCan();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<TradeForm>(emptyForm);
   const [error, setError] = useState("");
@@ -99,18 +104,24 @@ export default function TradeSelloutPage() {
               terjual, qty/status barang akan berkurang dan masuk pembukuan.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setForm({ ...emptyForm, date: todayInputDate() });
-              setError("");
-              setIsOpen(true);
-            }}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            <Plus className="size-4" />
-            Tambah Trade
-          </button>
+          {can("trade-sellout", "input") && (
+            <button
+              type="button"
+              onClick={() => {
+                setForm({
+                  ...emptyForm,
+                  store: storeNames[0] ?? "",
+                  date: todayInputDate(),
+                });
+                setError("");
+                setIsOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              <Plus className="size-4" />
+              Tambah Trade
+            </button>
+          )}
         </header>
 
         <div className="surface overflow-hidden">
@@ -165,13 +176,15 @@ export default function TradeSelloutPage() {
                         </span>
                       </td>
                       <td className={`${tdClass} text-center`}>
-                        <button
-                          type="button"
-                          onClick={() => toggleStatus(row.id)}
-                          className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                        >
-                          {row.status === "Sold" ? "Set Available" : "Set Sold"}
-                        </button>
+                        {can("trade-sellout", "edit") && (
+                          <button
+                            type="button"
+                            onClick={() => toggleStatus(row.id)}
+                            className="rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                          >
+                            {row.status === "Sold" ? "Set Available" : "Set Sold"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

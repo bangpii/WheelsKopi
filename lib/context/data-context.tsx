@@ -10,19 +10,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import type {
-  Customer,
-  Kpi,
-  StockItem,
-  Transaction,
-} from "@/lib/dashboard-data";
-import {
-  customers as demoCustomers,
-  kpis as demoKpis,
-  stockItems as demoStocks,
-} from "@/lib/dashboard-data";
+import type { Kpi, StockItem, Transaction } from "@/lib/dashboard-data";
 import type { DistribusiItem } from "@/lib/distribusi-data";
-import { initialDistribusiItems } from "@/lib/distribusi-data";
 import {
   SELLOUT_STORAGE_KEY,
   MOVEMENT_STORAGE_KEY,
@@ -37,27 +26,42 @@ import type {
   SelloutRecord,
   TradeRecord,
 } from "@/lib/transaction-data";
-import {
-  seedDailySpends,
-  seedFinanceStores,
-  seedMovements,
-  seedSellouts,
-  seedTrades,
-  selloutToTransaction,
-} from "@/lib/synced-data";
+import { selloutToTransaction } from "@/lib/synced-data";
 import {
   rolePermissions as defaultPermissions,
   roles as defaultRoles,
-  suppliers as seededSuppliers,
-  users as seededUsers,
+  seedUsers,
 } from "@/lib/master-data";
+import { ADMIN_ROLE, SESSION_KEY } from "@/lib/auth";
 import type {
+  CommunityRecord,
+  LibraryCarRecord,
+  PaymentRecord,
   RolePermission,
+  ServiceRecord,
+  StoreRecord,
   SupplierRecord,
   UserRecord,
 } from "@/lib/master-data";
+import type {
+  CustomerRecord,
+  DiscountRecord,
+  ReceiptPORecord,
+} from "@/lib/warehouse-data";
+import type { PurchaseOrderDetail } from "@/lib/purchase-data";
 
-export type { RolePermission, SupplierRecord, UserRecord } from "@/lib/master-data";
+export type {
+  RolePermission,
+  SupplierRecord,
+  UserRecord,
+  StoreRecord,
+  PaymentRecord,
+  ServiceRecord,
+  LibraryCarRecord,
+  CommunityRecord,
+} from "@/lib/master-data";
+export type { CustomerRecord, DiscountRecord, ReceiptPORecord } from "@/lib/warehouse-data";
+export type { PurchaseOrderDetail } from "@/lib/purchase-data";
 export type { DistribusiItem } from "@/lib/distribusi-data";
 
 /* ------------------------------------------------------------------ */
@@ -79,7 +83,7 @@ interface GlobalData {
   stockItems: StockItem[];
   transactions: Transaction[];
   kpis: Kpi[];
-  customers: Customer[];
+  customers: CustomerRecord[];
   suppliers: SupplierRecord[];
   products: Product[];
   roles: string[];
@@ -90,10 +94,18 @@ interface GlobalData {
   dailySpends: DailySpendItemRecord[];
   trades: TradeRecord[];
   financeStores: FinanceStoreDayRecord[];
+  stores: StoreRecord[];
+  storeNames: string[];
+  payments: PaymentRecord[];
+  services: ServiceRecord[];
+  libraryCars: LibraryCarRecord[];
+  communities: CommunityRecord[];
+  discounts: DiscountRecord[];
+  purchaseOrders: PurchaseOrderDetail[];
+  receipts: ReceiptPORecord[];
 
-  setStockItems: Dispatch<SetStateAction<StockItem[]>>;
   setKpis: Dispatch<SetStateAction<Kpi[]>>;
-  setCustomers: Dispatch<SetStateAction<Customer[]>>;
+  setCustomers: Dispatch<SetStateAction<CustomerRecord[]>>;
   setSuppliers: Dispatch<SetStateAction<SupplierRecord[]>>;
   setProducts: Dispatch<SetStateAction<Product[]>>;
   setRoles: Dispatch<SetStateAction<string[]>>;
@@ -104,6 +116,14 @@ interface GlobalData {
   setDailySpends: Dispatch<SetStateAction<DailySpendItemRecord[]>>;
   setTrades: Dispatch<SetStateAction<TradeRecord[]>>;
   setFinanceStores: Dispatch<SetStateAction<FinanceStoreDayRecord[]>>;
+  setStores: Dispatch<SetStateAction<StoreRecord[]>>;
+  setPayments: Dispatch<SetStateAction<PaymentRecord[]>>;
+  setServices: Dispatch<SetStateAction<ServiceRecord[]>>;
+  setLibraryCars: Dispatch<SetStateAction<LibraryCarRecord[]>>;
+  setCommunities: Dispatch<SetStateAction<CommunityRecord[]>>;
+  setDiscounts: Dispatch<SetStateAction<DiscountRecord[]>>;
+  setPurchaseOrders: Dispatch<SetStateAction<PurchaseOrderDetail[]>>;
+  setReceipts: Dispatch<SetStateAction<ReceiptPORecord[]>>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -118,50 +138,235 @@ export function toProduct(
   return {
     ...item,
     kategoriUtama: item.kategori,
-    history: [
-      `[${new Date().toLocaleString("id-ID")}] ${historyEntry}`,
-    ],
+    history: [`[${new Date().toLocaleString("id-ID")}] ${historyEntry}`],
   };
 }
 
 /** Product → DistribusiItem (untuk render di halaman distribusi). */
 export function toDistribusiItem(product: Product): DistribusiItem {
-  // Buang field yang bukan bagian dari DistribusiItem
-  const {
-    kategoriUtama: _kategoriUtama,
-    history: _history,
-    ...rest
-  } = product;
-  return rest;
+  const item: Partial<Product> = { ...product };
+  delete item.kategoriUtama;
+  delete item.history;
+  // SAFETY: after removing the two Product-only fields, the remaining shape
+  // matches DistribusiItem exactly (Product extends DistribusiItem).
+  return item as DistribusiItem;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Seed                                                              */
+/*  Data awal (sengaja kosong agar CRUD dimulai dari nol)             */
 /* ------------------------------------------------------------------ */
 
-const seededProducts: Product[] = initialDistribusiItems.map((item) =>
-  toProduct(item, "Data awal demo"),
-);
+const EMPTY_KPIS: Kpi[] = [];
+const EMPTY_CUSTOMERS: CustomerRecord[] = [];
+const EMPTY_SUPPLIERS: SupplierRecord[] = [];
+const EMPTY_PRODUCTS: Product[] = [];
+const EMPTY_SELLOUTS: SelloutRecord[] = [];
+const EMPTY_MOVEMENTS: MovementRecord[] = [];
+const EMPTY_DAILY_SPENDS: DailySpendItemRecord[] = [];
+const EMPTY_TRADES: TradeRecord[] = [];
+const EMPTY_FINANCE_STORES: FinanceStoreDayRecord[] = [];
+const EMPTY_STORES: StoreRecord[] = [];
+const EMPTY_PAYMENTS: PaymentRecord[] = [];
+const EMPTY_SERVICES: ServiceRecord[] = [];
+const EMPTY_LIBRARY_CARS: LibraryCarRecord[] = [];
+const EMPTY_COMMUNITIES: CommunityRecord[] = [];
+const EMPTY_DISCOUNTS: DiscountRecord[] = [];
+const EMPTY_PURCHASE_ORDERS: PurchaseOrderDetail[] = [];
+const EMPTY_RECEIPTS: ReceiptPORecord[] = [];
 
 /* ------------------------------------------------------------------ */
 /*  localStorage helper                                               */
 /* ------------------------------------------------------------------ */
 
 const STORAGE_KEYS = {
-  stocks: "wheelskopi_v3_stocks",
-  kpis: "wheelskopi_v3_kpis",
-  customers: "wheelskopi_v3_customers",
-  suppliers: "wheelskopi_v2_suppliers",
-  products: "wheelskopi_v2_products",
-  roles: "wheelskopi_v2_roles",
-  permissions: "wheelskopi_v2_permissions",
-  users: "wheelskopi_v2_users",
+  kpis: "wheelskopi_v5_kpis",
+  customers: "wheelskopi_v5_customers",
+  suppliers: "wheelskopi_v5_suppliers",
+  products: "wheelskopi_v5_products",
+  roles: "wheelskopi_v5_roles",
+  permissions: "wheelskopi_v5_permissions",
+  users: "wheelskopi_v5_users",
   sellouts: SELLOUT_STORAGE_KEY,
   movements: MOVEMENT_STORAGE_KEY,
   dailySpends: DAILY_SPEND_STORAGE_KEY,
   trades: TRADE_STORAGE_KEY,
   financeStores: FINANCE_STORE_STORAGE_KEY,
+  stores: "wheelskopi_v5_stores",
+  payments: "wheelskopi_v5_payments",
+  services: "wheelskopi_v5_services",
+  libraryCars: "wheelskopi_v5_library_cars",
+  communities: "wheelskopi_v5_communities",
+  discounts: "wheelskopi_v5_discounts",
+  purchaseOrders: "wheelskopi_v5_purchase_orders",
+  receipts: "wheelskopi_v5_receipts",
 } as const;
+
+const TRANSACTION_REPORT_STORAGE_KEYS = [
+  SELLOUT_STORAGE_KEY,
+  MOVEMENT_STORAGE_KEY,
+  DAILY_SPEND_STORAGE_KEY,
+  TRADE_STORAGE_KEY,
+  FINANCE_STORE_STORAGE_KEY,
+  STORAGE_KEYS.purchaseOrders,
+  STORAGE_KEYS.receipts,
+];
+
+const TRANSACTION_REPORT_CLEAR_KEY = "wheelskopi_v5_transaction_report_cleared";
+
+function clearTransactionReportDataOnce() {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (localStorage.getItem(TRANSACTION_REPORT_CLEAR_KEY) === "1") return;
+
+    for (const key of TRANSACTION_REPORT_STORAGE_KEYS) {
+      localStorage.removeItem(key);
+    }
+
+    localStorage.setItem(TRANSACTION_REPORT_CLEAR_KEY, "1");
+  } catch {
+    return;
+  }
+}
+
+clearTransactionReportDataOnce();
+
+const SEED_DATA_MIGRATION_KEY = "wheelskopi_v5_seed_data_migrated_v1";
+
+function migrateSeedDataOnce() {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (localStorage.getItem(SEED_DATA_MIGRATION_KEY) === "1") return;
+
+    const storedRolesRaw = localStorage.getItem(STORAGE_KEYS.roles);
+    if (storedRolesRaw) {
+      const storedRoles = JSON.parse(storedRolesRaw) as string[];
+      const nextRoles = Array.from(
+        new Set(
+          storedRoles.map((role) =>
+            role === "Administrator" ? ADMIN_ROLE : role,
+          ),
+        ),
+      );
+      localStorage.setItem(STORAGE_KEYS.roles, JSON.stringify(nextRoles));
+    }
+
+    const storedPermissionsRaw = localStorage.getItem(STORAGE_KEYS.permissions);
+    if (storedPermissionsRaw) {
+      const storedPermissions = JSON.parse(
+        storedPermissionsRaw,
+      ) as RolePermission[];
+      const byRole = new Map<string, string[]>();
+
+      for (const entry of storedPermissions) {
+        const roleName =
+          entry.roleName === "Administrator" ? ADMIN_ROLE : entry.roleName;
+
+        if (roleName === ADMIN_ROLE) {
+          byRole.set(roleName, []);
+        } else if (!byRole.has(roleName)) {
+          byRole.set(roleName, entry.permissions);
+        }
+      }
+
+      const nextPermissions = Array.from(
+        byRole,
+        ([roleName, permissions]) => ({ roleName, permissions }),
+      );
+      localStorage.setItem(
+        STORAGE_KEYS.permissions,
+        JSON.stringify(nextPermissions),
+      );
+    }
+
+    const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.users);
+    const storedUsers = storedUsersRaw
+      ? (JSON.parse(storedUsersRaw) as UserRecord[])
+      : [];
+    const seedByEmail = new Map(
+      seedUsers.map((user) => [user.email.toLowerCase(), user]),
+    );
+    const mergedUsers = storedUsers.map((user) => {
+      const seed = seedByEmail.get(user.email.toLowerCase());
+
+      if (seed) return { ...seed };
+
+      return user.role === "Administrator"
+        ? { ...user, role: ADMIN_ROLE }
+        : user;
+    });
+    const mergedEmails = new Set(
+      mergedUsers.map((user) => user.email.toLowerCase()),
+    );
+
+    for (const seed of seedUsers) {
+      if (!mergedEmails.has(seed.email.toLowerCase())) {
+        mergedUsers.push(seed);
+        mergedEmails.add(seed.email.toLowerCase());
+      }
+    }
+
+    localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(mergedUsers));
+
+    const sessionRaw = localStorage.getItem(SESSION_KEY);
+    if (sessionRaw) {
+      const session = JSON.parse(sessionRaw) as { role?: string };
+
+      if (session.role === "Administrator") {
+        localStorage.setItem(
+          SESSION_KEY,
+          JSON.stringify({ ...session, role: ADMIN_ROLE }),
+        );
+      }
+    }
+
+    localStorage.setItem(SEED_DATA_MIGRATION_KEY, "1");
+  } catch {
+    return;
+  }
+}
+
+migrateSeedDataOnce();
+
+const MECHANIC_PERMISSION_MIGRATION_KEY =
+  "wheelskopi_v5_mechanic_permissions_v1";
+
+function migrateMechanicPermissionsOnce() {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (localStorage.getItem(MECHANIC_PERMISSION_MIGRATION_KEY) === "1") {
+      return;
+    }
+
+    const rawPermissions = localStorage.getItem(STORAGE_KEYS.permissions);
+    if (rawPermissions) {
+      const storedPermissions = JSON.parse(rawPermissions) as RolePermission[];
+      const nextPermissions = storedPermissions.map((entry) => {
+        if (entry.roleName !== "Mekanik") return entry;
+
+        return {
+          ...entry,
+          permissions: Array.from(
+            new Set([...entry.permissions, "mekanik_view", "mekanik_edit"]),
+          ),
+        };
+      });
+
+      localStorage.setItem(
+        STORAGE_KEYS.permissions,
+        JSON.stringify(nextPermissions),
+      );
+    }
+
+    localStorage.setItem(MECHANIC_PERMISSION_MIGRATION_KEY, "1");
+  } catch {
+    return;
+  }
+}
+
+migrateMechanicPermissionsOnce();
 
 function readStored<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -216,31 +421,59 @@ function usePersistentCollection<T>(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Turunan stok dari master produk                                   */
+/* ------------------------------------------------------------------ */
+
+function productToStockItem(product: Product): StockItem {
+  const category: StockItem["category"] =
+    product.kategori === "Ban"
+      ? "Mobil"
+      : product.subKategori === "Velg"
+        ? "Velg"
+        : "Aksesori";
+
+  const size =
+    product.kategori === "Ban"
+      ? [product.ukuranTapak, product.ukuranTinggi, product.ring]
+          .filter(Boolean)
+          .join(" ")
+      : [product.ukuran, product.ring].filter(Boolean).join(" ");
+
+  return {
+    id: product.id,
+    name: product.namaBarang,
+    brand: product.merekBan || product.merekProduk || product.supplier,
+    size: size || "-",
+    category,
+    price: product.standarPrice || product.hargaModalToko || 0,
+    stock: product.stok,
+    minStock: 4,
+    sold: 0,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Context & Provider                                                */
 /* ------------------------------------------------------------------ */
 
 const DataContext = createContext<GlobalData | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [stockItems, setStockItems, clientStocks] = usePersistentCollection(
-    STORAGE_KEYS.stocks,
-    demoStocks,
-  );
   const [kpis, setKpis, clientKpis] = usePersistentCollection(
     STORAGE_KEYS.kpis,
-    demoKpis,
+    EMPTY_KPIS,
   );
   const [customers, setCustomers, clientCustomers] = usePersistentCollection(
     STORAGE_KEYS.customers,
-    demoCustomers,
+    EMPTY_CUSTOMERS,
   );
   const [suppliers, setSuppliers, clientSuppliers] = usePersistentCollection(
     STORAGE_KEYS.suppliers,
-    seededSuppliers,
+    EMPTY_SUPPLIERS,
   );
   const [products, setProducts, clientProducts] = usePersistentCollection(
     STORAGE_KEYS.products,
-    seededProducts,
+    EMPTY_PRODUCTS,
   );
   const [roles, setRoles, clientRoles] = usePersistentCollection(
     STORAGE_KEYS.roles,
@@ -250,32 +483,70 @@ export function DataProvider({ children }: { children: ReactNode }) {
     usePersistentCollection(STORAGE_KEYS.permissions, defaultPermissions);
   const [users, setUsers, clientUsers] = usePersistentCollection(
     STORAGE_KEYS.users,
-    seededUsers,
+    seedUsers,
   );
   const [sellouts, setSellouts, clientSellouts] = usePersistentCollection(
     STORAGE_KEYS.sellouts,
-    seedSellouts,
+    EMPTY_SELLOUTS,
   );
   const [movements, setMovements, clientMovements] = usePersistentCollection(
     STORAGE_KEYS.movements,
-    seedMovements,
+    EMPTY_MOVEMENTS,
   );
   const [dailySpends, setDailySpends, clientDailySpends] =
-    usePersistentCollection(STORAGE_KEYS.dailySpends, seedDailySpends);
+    usePersistentCollection(STORAGE_KEYS.dailySpends, EMPTY_DAILY_SPENDS);
   const [trades, setTrades, clientTrades] = usePersistentCollection(
     STORAGE_KEYS.trades,
-    seedTrades,
+    EMPTY_TRADES,
   );
   const [financeStores, setFinanceStores, clientFinanceStores] =
-    usePersistentCollection(STORAGE_KEYS.financeStores, seedFinanceStores);
+    usePersistentCollection(STORAGE_KEYS.financeStores, EMPTY_FINANCE_STORES);
+  const [stores, setStores, clientStores] = usePersistentCollection(
+    STORAGE_KEYS.stores,
+    EMPTY_STORES,
+  );
+  const [payments, setPayments, clientPayments] = usePersistentCollection(
+    STORAGE_KEYS.payments,
+    EMPTY_PAYMENTS,
+  );
+  const [services, setServices, clientServices] = usePersistentCollection(
+    STORAGE_KEYS.services,
+    EMPTY_SERVICES,
+  );
+  const [libraryCars, setLibraryCars, clientLibraryCars] =
+    usePersistentCollection(STORAGE_KEYS.libraryCars, EMPTY_LIBRARY_CARS);
+  const [communities, setCommunities, clientCommunities] =
+    usePersistentCollection(STORAGE_KEYS.communities, EMPTY_COMMUNITIES);
+  const [discounts, setDiscounts, clientDiscounts] = usePersistentCollection(
+    STORAGE_KEYS.discounts,
+    EMPTY_DISCOUNTS,
+  );
+  const [purchaseOrders, setPurchaseOrders, clientPurchaseOrders] =
+    usePersistentCollection(
+      STORAGE_KEYS.purchaseOrders,
+      EMPTY_PURCHASE_ORDERS,
+    );
+  const [receipts, setReceipts, clientReceipts] = usePersistentCollection(
+    STORAGE_KEYS.receipts,
+    EMPTY_RECEIPTS,
+  );
 
   const transactions = useMemo(
     () => sellouts.map(selloutToTransaction),
     [sellouts],
   );
 
+  const stockItems = useMemo(
+    () => products.map(productToStockItem),
+    [products],
+  );
+
+  const storeNames = useMemo(
+    () => stores.map((store) => store.storeName),
+    [stores],
+  );
+
   const hydrated =
-    clientStocks &&
     clientKpis &&
     clientCustomers &&
     clientSuppliers &&
@@ -287,14 +558,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     clientMovements &&
     clientDailySpends &&
     clientTrades &&
-    clientFinanceStores;
+    clientFinanceStores &&
+    clientStores &&
+    clientPayments &&
+    clientServices &&
+    clientLibraryCars &&
+    clientCommunities &&
+    clientDiscounts &&
+    clientPurchaseOrders &&
+    clientReceipts;
 
   /* Persist ke localStorage */
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEYS.stocks, JSON.stringify(stockItems));
-  }, [hydrated, stockItems]);
-
   useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEYS.kpis, JSON.stringify(kpis));
@@ -361,11 +635,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
     );
   }, [financeStores, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.stores, JSON.stringify(stores));
+  }, [hydrated, stores]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.payments, JSON.stringify(payments));
+  }, [hydrated, payments]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.services, JSON.stringify(services));
+  }, [hydrated, services]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE_KEYS.libraryCars,
+      JSON.stringify(libraryCars),
+    );
+  }, [hydrated, libraryCars]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE_KEYS.communities,
+      JSON.stringify(communities),
+    );
+  }, [communities, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.discounts, JSON.stringify(discounts));
+  }, [discounts, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(
+      STORAGE_KEYS.purchaseOrders,
+      JSON.stringify(purchaseOrders),
+    );
+  }, [hydrated, purchaseOrders]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEYS.receipts, JSON.stringify(receipts));
+  }, [hydrated, receipts]);
+
   return (
     <DataContext.Provider
       value={{
         stockItems,
-        setStockItems,
         transactions,
         kpis,
         setKpis,
@@ -391,6 +713,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setTrades,
         financeStores,
         setFinanceStores,
+        stores,
+        setStores,
+        storeNames,
+        payments,
+        setPayments,
+        services,
+        setServices,
+        libraryCars,
+        setLibraryCars,
+        communities,
+        setCommunities,
+        discounts,
+        setDiscounts,
+        purchaseOrders,
+        setPurchaseOrders,
+        receipts,
+        setReceipts,
       }}
     >
       {children}

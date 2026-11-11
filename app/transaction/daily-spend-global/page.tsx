@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Pencil, Trash2, Wallet, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import { rupiah } from "@/lib/dashboard-data";
-import { stores } from "@/lib/master-data";
 import {
   displayDate,
   type DailySpendItemRecord,
@@ -20,7 +20,8 @@ const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-ring/30";
 
 export default function DailySpendGlobalPage() {
-  const { dailySpends: rows, setDailySpends: setRows } = useData();
+  const { dailySpends: rows, setDailySpends: setRows, storeNames } = useData();
+  const can = useCan();
   const [editing, setEditing] = useState<DailySpendItemRecord | null>(null);
   const [form, setForm] = useState({ number: "", date: "", store: "", total: 0 });
 
@@ -115,12 +116,16 @@ export default function DailySpendGlobalPage() {
                     </td>
                     <td className={`${tdClass} text-center`}>
                       <div className="flex justify-center gap-2">
-                        <button type="button" onClick={() => openEdit(row)} className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20" title="Revisi">
-                          <Pencil className="size-4" />
-                        </button>
-                        <button type="button" onClick={() => setRows(rows.filter((entry) => entry.id !== row.id))} className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20" title="Hapus">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("daily-spend-global", "edit") && (
+                          <button type="button" onClick={() => openEdit(row)} className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20" title="Revisi">
+                            <Pencil className="size-4" />
+                          </button>
+                        )}
+                        {can("daily-spend-global", "delete") && (
+                          <button type="button" onClick={() => setRows(rows.filter((entry) => entry.id !== row.id))} className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20" title="Hapus">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -153,8 +158,8 @@ export default function DailySpendGlobalPage() {
                 <label className="space-y-1.5 text-sm">
                   <span className="font-medium">Store</span>
                   <select value={form.store} onChange={(event) => setForm({ ...form, store: event.target.value })} className={fieldClass}>
-                    {stores.map((store) => (
-                      <option key={store.id}>{store.storeName}</option>
+                    {storeNames.map((store) => (
+                      <option key={store}>{store}</option>
                     ))}
                   </select>
                 </label>

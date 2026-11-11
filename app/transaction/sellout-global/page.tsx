@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Globe2, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import { rupiah } from "@/lib/dashboard-data";
-import { storeNames } from "@/lib/master-data";
 import {
   displayDate,
   todayInputDate,
@@ -23,14 +23,19 @@ const fieldClass =
 const emptyForm = {
   number: "",
   date: "",
-  store: storeNames[0],
+  store: "",
   customer: "",
   discount: 0,
   grandTotal: 0,
 };
 
 export default function SelloutGlobalPage() {
-  const { sellouts: rows, setSellouts: setRows } = useData();
+  const {
+    sellouts: rows,
+    setSellouts: setRows,
+    storeNames,
+  } = useData();
+  const can = useCan();
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState<SelloutRecord | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +44,7 @@ export default function SelloutGlobalPage() {
     setEditing(null);
     setForm({
       ...emptyForm,
+      store: storeNames[0] ?? "",
       date: todayInputDate(),
       number: `SO-G${String(rows.length + 1).padStart(3, "0")}`,
     });
@@ -120,10 +126,12 @@ export default function SelloutGlobalPage() {
               Revisi transaksi sellout yang gagal atau berubah metode pembayaran pada hari yang sama.
             </p>
           </div>
-          <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
-            <Plus className="size-4" />
-            Create Sellout
-          </button>
+          {can("sellout-global", "input") && (
+            <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
+              <Plus className="size-4" />
+              Create Sellout
+            </button>
+          )}
         </header>
 
         <div className="surface overflow-hidden">
@@ -164,15 +172,19 @@ export default function SelloutGlobalPage() {
                     </td>
                     <td className={`${tdClass} text-center`}>
                       <div className="flex justify-center gap-2">
-                        <button type="button" onClick={() => openEdit(row)} className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20" title="Edit">
-                          <Pencil className="size-4" />
-                        </button>
+                        {can("sellout-global", "edit") && (
+                          <button type="button" onClick={() => openEdit(row)} className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20" title="Edit">
+                            <Pencil className="size-4" />
+                          </button>
+                        )}
                         <button type="button" className="rounded-lg bg-muted p-2 text-muted-foreground hover:text-foreground" title="Print summary">
                           <Printer className="size-4" />
                         </button>
-                        <button type="button" onClick={() => setRows(rows.filter((entry) => entry.id !== row.id))} className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20" title="Hapus">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("sellout-global", "delete") && (
+                          <button type="button" onClick={() => setRows(rows.filter((entry) => entry.id !== row.id))} className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20" title="Hapus">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

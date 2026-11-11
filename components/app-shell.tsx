@@ -1,8 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronRight, Menu, X } from "lucide-react";
+import { ChevronRight, Menu, ShieldX, X } from "lucide-react";
+import {
+  isAdminOnlyPath,
+  moduleForPath,
+  useCan,
+  useIsAdministrator,
+} from "@/lib/permissions";
 import { AosInit } from "./aos-init";
 import { GlobalSearch, NotificationBell, ProfileMenu } from "./header-tools";
 import { Sidebar } from "./sidebar";
@@ -12,8 +20,42 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
+function AccessDenied() {
+  return (
+    <div className="flex min-h-[60vh] w-full items-center justify-center">
+      <div className="liquid-glass w-full max-w-xl rounded-3xl p-8 text-center">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+          <ShieldX className="size-7" />
+        </span>
+        <h1 className="font-display mt-5 text-2xl font-semibold tracking-tight">
+          Akses Ditolak
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Role Anda tidak memiliki izin untuk membuka halaman ini. Hubungi
+          Kepala Toko jika Anda membutuhkan akses.
+        </p>
+        <Link
+          href="/"
+          className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+        >
+          Kembali ke Dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const can = useCan();
+  const isAdministrator = useIsAdministrator();
+  const requiredModule = moduleForPath(pathname);
+  const denied = isAdminOnlyPath(pathname)
+    ? !isAdministrator
+    : requiredModule
+      ? !can(requiredModule, "view")
+      : false;
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -123,7 +165,7 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         <main className="w-full px-3 py-6 sm:px-4 lg:px-6 xl:px-7 2xl:px-8 lg:py-8">
-          {children}
+          {denied ? <AccessDenied /> : children}
         </main>
       </div>
     </div>

@@ -10,8 +10,11 @@ import { OverviewHighlights } from "@/components/dashboard/overview-highlights";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { RevenueCard } from "@/components/dashboard/revenue-card";
 import { StockTable } from "@/components/dashboard/stock-table";
+import { useCan, useIsAdministrator } from "@/lib/permissions";
 
 export default function DashboardPage() {
+  const can = useCan();
+  const isAdministrator = useIsAdministrator();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -24,7 +27,7 @@ export default function DashboardPage() {
   // FUNGSI UNTUK MENGHAPUS SEMUA DATA (RESET)
   const handleResetData = () => {
     const confirmed = window.confirm(
-      "Apakah Anda yakin ingin mereset SEMUA data aplikasi? Data akan dikembalikan ke data awal (seed) tanggal 1-8."
+      "Apakah Anda yakin ingin mereset SEMUA data aplikasi? Semua data yang sudah diinput akan dihapus."
     );
 
     if (confirmed) {
@@ -52,7 +55,7 @@ export default function DashboardPage() {
               WheelsKopi Admin
             </p>
             <h1 className="font-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-              Dashboard Administrator
+              Dashboard Kepala Toko
             </h1>
             <p className="mt-2 max-w-2xl text-[15px] text-muted-foreground">
               Pantau stok ban, penjualan, transaksi, pelanggan, dan supplier
@@ -97,15 +100,17 @@ export default function DashboardPage() {
             </div>
 
             {/* TOMBOL RESET DATA BARU */}
-            <button
-              type="button"
-              onClick={handleResetData}
-              title="Hapus Semua Data"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger hover:text-white"
-            >
-              <Trash2 className="size-3.5" />
-              Reset Data
-            </button>
+            {isAdministrator && (
+              <button
+                type="button"
+                onClick={handleResetData}
+                title="Hapus Semua Data"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger hover:text-white"
+              >
+                <Trash2 className="size-3.5" />
+                Reset Data
+              </button>
+            )}
           </div>
         </section>
 
@@ -142,30 +147,38 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-              >
-                Buat Penjualan Baru
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
-              >
-                Purchase Order
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
-              >
-                Penerimaan Barang
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
-              >
-                Laporan Stok
-              </button>
+              {can("sellout", "input") && (
+                <button
+                  type="button"
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                >
+                  Buat Penjualan Baru
+                </button>
+              )}
+              {can("purchase-order", "input") && (
+                <button
+                  type="button"
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
+                >
+                  Purchase Order
+                </button>
+              )}
+              {can("receipt", "input") && (
+                <button
+                  type="button"
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
+                >
+                  Penerimaan Barang
+                </button>
+              )}
+              {can("report", "view") && (
+                <button
+                  type="button"
+                  className="rounded-xl border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/60"
+                >
+                  Laporan Stok
+                </button>
+              )}
             </div>
           </section>
         </section>

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2, Eye, X, History, Building2, Copy } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { stores as demoStores } from "@/lib/master-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 interface Store {
   id: string;
@@ -21,7 +22,8 @@ interface Store {
 }
 
 export default function StoresPage() {
-  const [stores, setStores] = useState<Store[]>(demoStores);
+  const { stores, setStores } = useData();
+  const can = useCan();
   const [search] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,9 +121,11 @@ export default function StoresPage() {
 
         {/* ACTION BAR */}
         <div className="flex flex-wrap gap-2 bg-card p-4 rounded-xl border border-border shadow-sm">
-          <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-            <Plus className="size-4" /> Create
-          </button>
+          {can("store", "input") && (
+            <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Plus className="size-4" /> Create
+            </button>
+          )}
           <button className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
             <Building2 className="size-4" /> Item Store
           </button>
@@ -173,9 +177,13 @@ export default function StoresPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEditClick(s)} className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Edit className="size-4" /></button>
+                        {can("store", "edit") && (
+                          <button onClick={() => handleEditClick(s)} className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Edit className="size-4" /></button>
+                        )}
                         <button onClick={() => setViewStore(s)} className="rounded-lg bg-yellow-500/10 p-2 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400 transition-colors" title="Lihat Detail"><Eye className="size-4" /></button>
-                        <button onClick={() => handleDelete(s.id)} className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 dark:text-red-400 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
+                        {can("store", "delete") && (
+                          <button onClick={() => handleDelete(s.id)} className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 dark:text-red-400 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
+                        )}
                       </div>
                     </td>
                   </tr>

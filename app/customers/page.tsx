@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Eye, Pencil, Plus, Search, Trash2, UserRound, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { customerTypes, customers as demoCustomers, type CustomerRecord } from "@/lib/warehouse-data";
+import { customerTypes, type CustomerRecord } from "@/lib/warehouse-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 const thClass =
   "whitespace-nowrap px-4 py-3.5 text-left text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
@@ -23,7 +25,8 @@ const emptyForm = {
 };
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<CustomerRecord[]>(demoCustomers);
+  const { customers, setCustomers } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState<CustomerRecord | null>(null);
@@ -107,14 +110,16 @@ export default function CustomersPage() {
         </header>
 
         <div className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-          >
-            <Plus className="size-4" />
-            Create Customer
-          </button>
+          {can("customer", "input") && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="size-4" />
+              Create Customer
+            </button>
+          )}
           <div className="relative w-full sm:w-80">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -183,22 +188,26 @@ export default function CustomersPage() {
                           >
                             <Eye className="size-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(customer)}
-                            className="rounded-lg bg-primary-soft p-2 text-primary transition-colors hover:bg-primary/20"
-                            title="Edit"
-                          >
-                            <Pencil className="size-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(customer)}
-                            className="rounded-lg bg-danger-soft p-2 text-danger transition-colors hover:bg-danger/20"
-                            title="Hapus"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                          {can("customer", "edit") && (
+                            <button
+                              type="button"
+                              onClick={() => openEdit(customer)}
+                              className="rounded-lg bg-primary-soft p-2 text-primary transition-colors hover:bg-primary/20"
+                              title="Edit"
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                          )}
+                          {can("customer", "delete") && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(customer)}
+                              className="rounded-lg bg-danger-soft p-2 text-danger transition-colors hover:bg-danger/20"
+                              title="Hapus"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

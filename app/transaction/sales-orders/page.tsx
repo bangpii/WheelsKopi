@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { rupiah } from "@/lib/dashboard-data";
 import { useData } from "@/lib/context/data-context";
-import { storeNames } from "@/lib/master-data";
 
 const fieldClass =
   "rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none focus:border-primary/50";
@@ -16,7 +15,7 @@ const thClass =
 const tdClass = "whitespace-nowrap border-b border-border/70 px-4 py-3 text-sm";
 
 export default function SalesOrdersPage() {
-  const { sellouts: records } = useData();
+  const { sellouts: records, storeNames } = useData();
   const [search, setSearch] = useState("");
   const [store, setStore] = useState("Semua Store");
 

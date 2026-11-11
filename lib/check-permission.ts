@@ -1,34 +1,39 @@
-import type { RolePermission } from "./context/data-context";
-
-interface Session {
-  role?: string;
-}
+import type { RolePermission } from "./master-data";
+import { rolePermissions as defaultRolePermissions } from "./master-data";
+import { ADMIN_ROLE, parseSessionRole, SESSION_KEY } from "./auth";
 
 export function checkPermission(moduleId: string, action: string): boolean {
   if (typeof window === "undefined") {
     return true;
   }
 
-  const rawUser = localStorage.getItem("wheelskopi_logged_in_user");
+  const role = parseSessionRole(localStorage.getItem(SESSION_KEY));
 
-  if (!rawUser) {
+  if (!role) {
+    return false;
+  }
+
+  if (role === ADMIN_ROLE) {
     return true;
   }
 
-  // SAFETY: the session value is written by the login flow using this shape.
-  const currentUser = JSON.parse(rawUser) as Session;
-  const rawPermissions = localStorage.getItem("wheelskopi_v2_permissions");
+  const rawPermissions = localStorage.getItem("wheelskopi_v5_permissions");
+  let permissions = defaultRolePermissions;
 
-  if (!rawPermissions) {
-    return true;
+  if (rawPermissions) {
+    try {
+      permissions = JSON.parse(rawPermissions) as RolePermission[];
+    } catch {
+      permissions = defaultRolePermissions;
+    }
   }
 
-  // SAFETY: role permissions are written by DataProvider as RolePermission[].
-  const permissions = JSON.parse(rawPermissions) as RolePermission[];
-  const rolePermission = permissions.find((entry) => entry.roleName === currentUser.role);
+  const rolePermission =
+    permissions.find((entry) => entry.roleName === role) ??
+    defaultRolePermissions.find((entry) => entry.roleName === role);
 
   if (!rolePermission) {
-    return true;
+    return false;
   }
 
   return rolePermission.permissions.includes(`${moduleId}_${action}`);

@@ -4,21 +4,17 @@ import { type ReactNode, useMemo, useState } from "react";
 import { Check, Eye, Plus, Search, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import { rupiah } from "@/lib/dashboard-data";
-import { storeNames } from "@/lib/master-data";
-import { othersRecords, type OthersRecord } from "@/lib/operations-data";
-
-type Category = "Ban" | "Others";
-
-interface PurchaseDetail extends OthersRecord {
-  category: Category;
-  deliverTo: string;
-  invoiceNumber: string;
-  rawPriceAfterDisc: number;
-  additionalDiscount: number;
-  cashbackPercent: number;
-  status: "Draft" | "Completed";
-}
+import {
+  applyPurchaseOrderToStock,
+  purchaseFinanceEntry,
+  upsertFinanceLedger,
+} from "@/lib/integration";
+import {
+  type PurchaseOrderCategory as Category,
+  type PurchaseOrderDetail as PurchaseDetail,
+} from "@/lib/purchase-data";
 
 interface POColumn {
   key: string;
@@ -30,19 +26,6 @@ interface POColumn {
 }
 
 const money = (value: number) => rupiah.format(value);
-
-const seedDetails: PurchaseDetail[] = othersRecords.map((record, index) => ({
-  ...record,
-  category: record.item === "Ban" ? "Ban" : "Others",
-  deliverTo: index % 2 === 0 ? storeNames[0] : storeNames[1] ?? storeNames[0],
-  invoiceNumber: `INV-PO-${record.nomorBon}`,
-  rawPriceAfterDisc: Math.round(
-    record.rawPrice * (1 - record.sswDisc / 100),
-  ),
-  additionalDiscount: 0,
-  cashbackPercent: 0,
-  status: "Completed",
-}));
 
 const poColumns: POColumn[] = [
   { key: "bulan", label: "Bulan", value: (row) => row.bulan },
@@ -239,7 +222,7 @@ interface DetailForm {
 const emptyForm: DetailForm = {
   category: "Ban",
   date: "2026-11-09",
-  deliverTo: storeNames[0],
+  deliverTo: "",
   invoiceNumber: "",
   lunas: "Lunas",
   kodeBarang: "",
@@ -316,8 +299,15 @@ function Field({
 }
 
 export default function PurchaseOrdersPage() {
-  const { setProducts, suppliers } = useData();
-  const [details, setDetails] = useState<PurchaseDetail[]>(seedDetails);
+  const {
+    setProducts,
+    suppliers,
+    purchaseOrders: details,
+    setPurchaseOrders: setDetails,
+    setFinanceStores,
+    storeNames,
+  } = useData();
+  const can = useCan();
   const [activeTab, setActiveTab] = useState<Category>("Ban");
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -378,7 +368,7 @@ export default function PurchaseOrdersPage() {
   const modalToko = modalPerSet + (Number(form.up) || 0);
 
   const openCreate = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, deliverTo: storeNames[0] ?? "" });
     setError("");
     setIsOpen(true);
   };
@@ -411,8 +401,12 @@ export default function PurchaseOrdersPage() {
       return;
     }
 
+    const number = form.nomorBon.trim()
+      ? `PO-${form.nomorBon.trim()}`
+      : `PO-${form.invoiceNumber.trim()}`;
     const record: PurchaseDetail = {
       id: `PO-${form.invoiceNumber.trim()}-${details.length + 1}`,
+      number,
       category: form.category as Category,
       bulan: monthOf(form.date),
       date: toDisplayDate(form.date),
@@ -456,34 +450,63 @@ export default function PurchaseOrdersPage() {
         : toDisplayDate(form.date),
       notes: form.notes,
       status: form.status,
+      received: form.status === "Completed",
     };
 
     setDetails((current) => [record, ...current]);
     setActiveTab(record.category);
+
+    if (record.received) {
+      setProducts((current) => applyPurchaseOrderToStock(current, record));
+      setFinanceStores((current) =>
+        upsertFinanceLedger(current, {
+          store: record.deliverTo,
+          date: record.date,
+          entries: [purchaseFinanceEntry(record)],
+        }),
+      );
+    }
+
     setIsOpen(false);
   };
 
   const completePO = (row: PurchaseDetail) => {
-    if (row.status === "Completed") return;
+    if (row.received) return;
+
+    const completed: PurchaseDetail = {
+      ...row,
+      status: "Completed",
+      received: true,
+    };
 
     setDetails((current) =>
-      current.map((item) =>
-        item.id === row.id ? { ...item, status: "Completed" } : item,
-      ),
+      current.map((item) => (item.id === row.id ? completed : item)),
     );
 
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === row.kodeBarang ||
-        product.namaBarang.toLowerCase() === row.item.toLowerCase()
-          ? { ...product, stok: product.stok + row.qty }
-          : product,
-      ),
+    setProducts((current) => applyPurchaseOrderToStock(current, completed));
+
+    setFinanceStores((current) =>
+      upsertFinanceLedger(current, {
+        store: completed.deliverTo,
+        date: completed.date,
+        entries: [purchaseFinanceEntry(completed)],
+      }),
     );
   };
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Hapus purchase order ini?")) return;
+    const target = details.find((row) => row.id === id);
+    if (target?.received) {
+      setProducts((current) =>
+        current.map((product) =>
+          product.id === target.kodeBarang ||
+          product.namaBarang.toLowerCase() === target.item.toLowerCase()
+            ? { ...product, stok: Math.max(0, product.stok - target.qty) }
+            : product,
+        ),
+      );
+    }
     setDetails((current) => current.filter((row) => row.id !== id));
   };
 
@@ -517,14 +540,16 @@ export default function PurchaseOrdersPage() {
                 className="h-10 w-56 rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-accent"
               />
             </div>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition hover:opacity-90"
-            >
-              <Plus className="size-4" />
-              Create Purchase Order
-            </button>
+            {can("purchase-order", "input") && (
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition hover:opacity-90"
+              >
+                <Plus className="size-4" />
+                Create Purchase Order
+              </button>
+            )}
           </div>
         </div>
 
@@ -613,15 +638,17 @@ export default function PurchaseOrdersPage() {
                       })}
                       <td className={`${tdClass} text-center`}>
                         <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => completePO(row)}
-                            disabled={row.status === "Completed"}
-                            className="rounded-lg bg-success-soft p-2 text-success transition hover:bg-success/20 disabled:opacity-40"
-                            title="Complete PO"
-                          >
-                            <Check className="size-4" />
-                          </button>
+                          {can("purchase-order", "edit") && (
+                            <button
+                              type="button"
+                              onClick={() => completePO(row)}
+                              disabled={row.status === "Completed"}
+                              className="rounded-lg bg-success-soft p-2 text-success transition hover:bg-success/20 disabled:opacity-40"
+                              title="Complete PO"
+                            >
+                              <Check className="size-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setSelected(row)}
@@ -630,14 +657,16 @@ export default function PurchaseOrdersPage() {
                           >
                             <Eye className="size-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(row.id)}
-                            className="rounded-lg bg-danger-soft p-2 text-danger transition hover:bg-danger/20"
-                            title="Hapus"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                          {can("purchase-order", "delete") && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(row.id)}
+                              className="rounded-lg bg-danger-soft p-2 text-danger transition hover:bg-danger/20"
+                              title="Hapus"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

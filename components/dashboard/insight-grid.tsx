@@ -7,7 +7,6 @@ import {
   customerNameOf,
   filterTransactions,
 } from "@/lib/dashboard-filter";
-import { suppliers } from "@/lib/dashboard-data";
 import type { Transaction } from "@/lib/dashboard-data";
 
 interface InsightGridProps {
@@ -104,7 +103,7 @@ function buildCustomers(transactions: Transaction[]): CustomerSales[] {
 }
 
 export function InsightGrid({ startDate, endDate }: InsightGridProps) {
-  const { products, transactions } = useData();
+  const { products, transactions, suppliers } = useData();
   const filteredTransactions = filterTransactions(
     transactions,
     startDate,
@@ -287,32 +286,32 @@ export function InsightGrid({ startDate, endDate }: InsightGridProps) {
         </div>
 
         <div className="mt-4 space-y-2">
-          {suppliers.map((supplier) => (
-            <Link
-              key={supplier.name}
-              href="/suppliers"
-              className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-muted/60"
-            >
-              <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 font-display text-[10px] font-semibold text-primary">
-                {supplier.brand.slice(0, 3).toUpperCase()}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{supplier.name}</p>
-                <p className="truncate text-[11px] text-muted-foreground">
-                  Lead time {supplier.leadTime}
-                </p>
-              </div>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  supplier.status === "Aktif"
-                    ? "bg-success-soft text-success"
-                    : "bg-warning-soft text-warning"
-                }`}
+          {suppliers.length === 0 ? (
+            <p className="rounded-xl bg-muted/40 px-3 py-6 text-center text-xs text-muted-foreground">
+              Belum ada supplier terdaftar.
+            </p>
+          ) : (
+            suppliers.map((supplier) => (
+              <Link
+                key={supplier.id}
+                href="/suppliers"
+                className="flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-muted/60"
               >
-                {supplier.status}
-              </span>
-            </Link>
-          ))}
+                <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 font-display text-[10px] font-semibold text-primary">
+                  {supplier.name.slice(0, 3).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{supplier.name}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {supplier.contactPerson || supplier.email}
+                  </p>
+                </div>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {supplier.tipe}
+                </span>
+              </Link>
+            ))
+          )}
         </div>
 
         <div className="mt-5 rounded-2xl border border-border bg-muted/40 p-4">

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2, X, History, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { communities as demoCommunities } from "@/lib/master-data";
+import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 
 interface Community {
   id: string;
@@ -21,7 +22,8 @@ interface CommunityFormData {
 }
 
 export default function CommunitiesPage() {
-  const [communities, setCommunities] = useState<Community[]>(demoCommunities);
+  const { communities, setCommunities } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,9 +99,11 @@ export default function CommunitiesPage() {
 
         {/* ACTION BAR */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
-          <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">
-            <Plus className="size-4" /> Create
-          </button>
+          {can("community", "input") && (
+            <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">
+              <Plus className="size-4" /> Create
+            </button>
+          )}
           
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Cari:</span>
@@ -135,15 +139,19 @@ export default function CommunitiesPage() {
                     <td className="px-5 py-4 text-xs text-muted-foreground">{c.createdAt}</td>
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
-                        <button onClick={() => handleEditClick(c)} className="rounded bg-green-500 p-1.5 text-white hover:bg-green-600 transition-colors" title="Edit">
-                          <Edit className="size-4" />
-                        </button>
+                        {can("community", "edit") && (
+                          <button onClick={() => handleEditClick(c)} className="rounded bg-green-500 p-1.5 text-white hover:bg-green-600 transition-colors" title="Edit">
+                            <Edit className="size-4" />
+                          </button>
+                        )}
                         <button onClick={() => setViewCommunity(c)} className="rounded bg-yellow-500 p-1.5 text-white hover:bg-yellow-600 transition-colors" title="History">
                           <History className="size-4" />
                         </button>
-                        <button onClick={() => handleDelete(c.id)} className="rounded bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors" title="Hapus">
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("community", "delete") && (
+                          <button onClick={() => handleDelete(c.id)} className="rounded bg-red-500 p-1.5 text-white hover:bg-red-600 transition-colors" title="Hapus">
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

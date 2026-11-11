@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { Car, PackageMinus, Plus, Search, Trash2, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
+import { useCan } from "@/lib/permissions";
 import { rupiah } from "@/lib/dashboard-data";
-import { storeNames } from "@/lib/master-data";
 import {
   displayDate,
   inputTime,
@@ -14,6 +14,7 @@ import {
   type SelloutItem,
   type SelloutRecord,
 } from "@/lib/transaction-data";
+import { restoreSelloutStock } from "@/lib/integration";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background/70 px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-ring/30";
@@ -30,6 +31,7 @@ interface SelloutForm {
   car: string;
   licensePlate: string;
   store: string;
+  paymentMethod: string;
 }
 
 const emptyForm: SelloutForm = {
@@ -38,7 +40,8 @@ const emptyForm: SelloutForm = {
   description: "",
   car: "",
   licensePlate: "",
-  store: storeNames[0],
+  store: "",
+  paymentMethod: "",
 };
 
 export default function SelloutPage() {
@@ -48,7 +51,11 @@ export default function SelloutPage() {
     customers,
     sellouts: records,
     setSellouts: setRecords,
+    storeNames,
+    payments,
+    libraryCars,
   } = useData();
+  const can = useCan();
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<SelloutForm>(emptyForm);
@@ -81,7 +88,13 @@ export default function SelloutPage() {
   ).length;
 
   const openCreate = () => {
-    setForm({ ...emptyForm, date: todayInputDate() });
+    setForm({
+      ...emptyForm,
+      date: todayInputDate(),
+      store: storeNames[0] ?? "",
+      paymentMethod:
+        payments.find((payment) => payment.status === "Aktif")?.name ?? "",
+    });
     setItems([]);
     setSelectedProduct("");
     setQty("1");
@@ -147,7 +160,7 @@ export default function SelloutPage() {
       date: displayDate(form.date),
       dateISO: form.date,
       time: inputTime(),
-      paymentMethod: "Transfer",
+      paymentMethod: form.paymentMethod || "Transfer",
       customer: form.customer,
       description: form.description,
       car: form.car,
@@ -156,6 +169,7 @@ export default function SelloutPage() {
       items,
       total: selloutSubtotal(items),
       status: "Menunggu Approval",
+      mechanicStatus: "Menunggu",
       createdAt: new Date().toLocaleDateString("id-ID"),
     };
 
@@ -179,6 +193,8 @@ export default function SelloutPage() {
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Hapus data sellout ini?")) return;
+    const target = records.find((row) => row.id === id);
+    if (target) setProducts((current) => restoreSelloutStock(current, target));
     const next = records.filter((row) => row.id !== id);
     setRecords(next);
   };
@@ -199,14 +215,16 @@ export default function SelloutPage() {
               dibuat setelah sellout disetujui kepala toko.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)]"
-          >
-            <Plus className="size-4" />
-            Buat Sellout
-          </button>
+          {can("sellout", "input") && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_16px_32px_-16px_var(--primary)]"
+            >
+              <Plus className="size-4" />
+              Buat Sellout
+            </button>
+          )}
         </header>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -313,14 +331,16 @@ export default function SelloutPage() {
                         </span>
                       </td>
                       <td className={`${tdClass} text-center`}>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(row.id)}
-                          className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20"
-                          title="Hapus"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        {can("sellout", "delete") && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(row.id)}
+                            className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20"
+                            title="Hapus"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -387,6 +407,26 @@ export default function SelloutPage() {
                   </select>
                 </label>
                 <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Metode Pembayaran</span>
+                  <select
+                    required
+                    value={form.paymentMethod}
+                    onChange={(event) =>
+                      setForm({ ...form, paymentMethod: event.target.value })
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="">Pilih metode</option>
+                    {payments
+                      .filter((payment) => payment.status === "Aktif")
+                      .map((payment) => (
+                        <option key={payment.id} value={payment.name}>
+                          {payment.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="space-y-1.5 text-sm">
                   <span className="font-medium">Tanggal</span>
                   <input
                     type="date"
@@ -400,15 +440,24 @@ export default function SelloutPage() {
                 </label>
                 <label className="space-y-1.5 text-sm">
                   <span className="font-medium">Car / Jenis Mobil</span>
-                  <input
+                  <select
                     required
                     value={form.car}
                     onChange={(event) =>
                       setForm({ ...form, car: event.target.value })
                     }
-                    placeholder="Toyota Avanza"
                     className={fieldClass}
-                  />
+                  >
+                    <option value="">Pilih mobil</option>
+                    {libraryCars.map((car) => (
+                      <option
+                        key={car.id}
+                        value={`${car.merk} ${car.type}`}
+                      >
+                        {car.merk} {car.type}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="space-y-1.5 text-sm">
                   <span className="font-medium">License Plat</span>

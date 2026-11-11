@@ -6,29 +6,7 @@ export interface NewsItem {
   tag: string;
 }
 
-export const news: NewsItem[] = [
-  {
-    id: "NEWS-001",
-    title: "Stok ban SUV menipis",
-    body: "Periksa kembali stok Achilles Desert Hawk dan Hankook Dynapro sebelum akhir pekan.",
-    date: "28 Okt 2026",
-    tag: "Stok",
-  },
-  {
-    id: "NEWS-002",
-    title: "Setoran finance mingguan",
-    body: "Setoran toko Medan dan Binjai diperiksa setiap Senin pukul 09.00 WIB.",
-    date: "27 Okt 2026",
-    tag: "Finance",
-  },
-  {
-    id: "NEWS-003",
-    title: "Program tukar tambah velg",
-    body: "Velg second wajib dicatat nomor bon dan catatan velg baru pasangannya.",
-    date: "25 Okt 2026",
-    tag: "Promo",
-  },
-];
+export const news: NewsItem[] = [];
 
 export interface CustomerRecord {
   id: string;

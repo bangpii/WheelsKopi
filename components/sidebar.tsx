@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Boxes,
+  Car,
   ChevronDown,
   ChevronRight,
   ChevronsRight,
@@ -13,14 +14,16 @@ import {
   LayoutDashboard,
   LifeBuoy,
   ReceiptText,
-  ShieldCheck,
   TrendingUp,
+  Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useCan, useIsAdministrator } from "@/lib/permissions";
 
 interface NavSubItem {
   label: string;
   href?: string;
+  moduleId?: string;
 }
 
 interface NavItem {
@@ -29,6 +32,8 @@ interface NavItem {
   icon: LucideIcon;
   target?: string;
   href?: string;
+  moduleId?: string;
+  adminOnly?: boolean;
   subItems?: NavSubItem[];
 }
 
@@ -38,69 +43,85 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     icon: LayoutDashboard,
     target: "overview",
+    moduleId: "dashboard",
   },
   {
     id: "distribusi",
-    label: "Menu Distribusi", // <-- Teks diubah di sini
+    label: "Menu Distribusi",
     icon: Boxes,
     href: "/distribusi",
+    moduleId: "distribusi",
   },
   {
     id: "profit",
     label: "Analytics & Profit",
     icon: TrendingUp,
     href: "/profit",
+    moduleId: "profit",
   },
   {
     id: "master-management",
     label: "Master Management",
     icon: Database,
     subItems: [
-      { label: "Product Store", href: "/distribusi" },
-      { label: "Supplier", href: "/suppliers" },
-      { label: "Store", href: "/stores" },
-      { label: "User", href: "/users" },
-      { label: "Payment", href: "/payments" },
-      { label: "Service", href: "/services" },
-      { label: "Library Cars", href: "/library-cars" },
-      { label: "Community", href: "/communities" },
-      { label: "Customer", href: "/customers" },
-      { label: "Voucher & Discount", href: "/discounts" },
+      { label: "Product Store", href: "/products", moduleId: "product" },
+      { label: "Supplier", href: "/suppliers", moduleId: "supplier" },
+      { label: "Store", href: "/stores", moduleId: "store" },
+      { label: "User", href: "/users", moduleId: "user" },
+      { label: "Payment", href: "/payments", moduleId: "payment" },
+      { label: "Service", href: "/services", moduleId: "service" },
+      { label: "Library Cars", href: "/library-cars", moduleId: "library" },
+      { label: "Community", href: "/communities", moduleId: "community" },
+      { label: "Customer", href: "/customers", moduleId: "customer" },
+      { label: "Voucher & Discount", href: "/discounts", moduleId: "discount" },
     ],
-  },
-  {
-    id: "role-permission",
-    label: "Role & Permission",
-    icon: ShieldCheck,
-    href: "/settings/permissions",
   },
   {
     id: "transaction",
     label: "Transaction",
     icon: ReceiptText,
     subItems: [
-      { label: "Purchase Orders", href: "/purchase-orders" },
-      { label: "Receipt PO", href: "/transaction/receipt" },
-      { label: "Sellout", href: "/transaction/sellout" },
-      { label: "Halaman Kerja", href: "/transaction/work" },
-      { label: "Invoice", href: "/transaction/invoice" },
-      { label: "Movement", href: "/transaction/movement" },
-      { label: "Daily Spend", href: "/transaction/daily-spend" },
-      { label: "Finance Store", href: "/finance-store" },
-      { label: "Sales Orders", href: "/transaction/sales-orders" },
-      { label: "Sellout Global", href: "/transaction/sellout-global" },
-      { label: "Daily Spend Global", href: "/transaction/daily-spend-global" },
+      { label: "Purchase Orders", href: "/purchase-orders", moduleId: "purchase-order" },
+      { label: "Receipt PO", href: "/transaction/receipt", moduleId: "receipt" },
+      { label: "Sellout", href: "/transaction/sellout", moduleId: "sellout" },
+      { label: "Halaman Kerja", href: "/transaction/work", moduleId: "sellout" },
+      { label: "Invoice", href: "/transaction/invoice", moduleId: "invoice" },
+      { label: "Movement", href: "/transaction/movement", moduleId: "movement" },
+      { label: "Daily Spend", href: "/transaction/daily-spend", moduleId: "daily-spend" },
+      { label: "Finance Store", href: "/finance-store", moduleId: "finance-store" },
+      { label: "Sales Orders", href: "/transaction/sales-orders", moduleId: "sales-order" },
+      { label: "Sellout Global", href: "/transaction/sellout-global", moduleId: "sellout-global" },
+      {
+        label: "Daily Spend Global",
+        href: "/transaction/daily-spend-global",
+        moduleId: "daily-spend-global",
+      },
     ],
+  },
+  {
+    id: "mekanik",
+    label: "Halaman Mekanik",
+    icon: Car,
+    href: "/mekanik",
+    moduleId: "mekanik",
   },
   {
     id: "report",
     label: "Report",
     icon: BarChart3,
     subItems: [
-      { label: "Report Sellout", href: "/report/sellout" },
-      { label: "Report Profit", href: "/report/profit" },
-      { label: "Trade Sellout", href: "/report/trade-sellout" },
+      { label: "Report Sellout", href: "/report/sellout", moduleId: "report" },
+      { label: "Report Profit", href: "/report/profit", moduleId: "report" },
+      { label: "Trade Sellout", href: "/report/trade-sellout", moduleId: "trade-sellout" },
     ],
+  },
+  {
+    id: "utility",
+    label: "Utility",
+    icon: Wrench,
+    href: "/settings/utility",
+    moduleId: "utility",
+    adminOnly: true,
   },
 ];
 
@@ -108,11 +129,45 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
+/** Id grup menu (yang punya submenu) yang berisi halaman aktif, jika ada. */
+function findActiveGroupId(pathname: string): string | undefined {
+  return NAV_ITEMS.find((item) =>
+    item.subItems?.some((child) => child.href === pathname),
+  )?.id;
+}
+
 export function Sidebar({ onNavigate }: SidebarProps) {
   const [active, setActive] = useState("overview");
-  const [expanded, setExpanded] = useState<string[]>(["master-management"]);
   const pathname = usePathname();
   const router = useRouter();
+  const navRef = useRef<HTMLElement>(null);
+  const can = useCan();
+  const isAdministrator = useIsAdministrator();
+
+  // Sidebar dibuat ulang di setiap halaman (AppShell ada di tiap page), jadi
+  // state awalnya harus langsung benar: buka grup yang berisi halaman aktif.
+  // Master Management hanya terbuka default jika tidak ada grup aktif.
+  const [expanded, setExpanded] = useState<string[]>(() => {
+    const activeGroupId = findActiveGroupId(pathname);
+
+    return [activeGroupId ?? "master-management"];
+  });
+
+  // Gulir daftar menu ke item aktif agar tidak kembali ke paling atas.
+  useEffect(() => {
+    const nav = navRef.current;
+    const activeItem = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+
+    if (!nav || !activeItem) {
+      return;
+    }
+
+    const navRect = nav.getBoundingClientRect();
+    const itemRect = activeItem.getBoundingClientRect();
+
+    nav.scrollTop +=
+      itemRect.top - navRect.top - nav.clientHeight / 2 + itemRect.height / 2;
+  }, [pathname]);
 
   useEffect(() => {
     const element = document.getElementById("overview");
@@ -183,6 +238,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       <nav
+        ref={navRef}
         aria-label="Navigasi utama"
         className="no-scrollbar flex-1 overflow-y-auto"
       >
@@ -193,6 +249,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isDashboard = item.target === "overview";
+            const subItems = item.subItems?.filter(
+              (child) => !child.moduleId || can(child.moduleId, "view"),
+            );
+
+            if (item.adminOnly && !isAdministrator) {
+              return null;
+            }
+
+            if (!subItems && item.moduleId && !can(item.moduleId, "view")) {
+              return null;
+            }
+
+            if (subItems && subItems.length === 0) {
+              return null;
+            }
 
             const isDashboardActive =
               isDashboard && pathname === "/" && active === "overview";
@@ -203,9 +274,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
             const isExpanded =
               expanded.includes(item.id) ||
-              item.subItems?.some((child) => child.href === pathname) === true;
+              subItems?.some((child) => child.href === pathname) === true;
 
-            if (!item.subItems) {
+            if (!subItems) {
               return (
                 <li key={item.id}>
                   <button
@@ -267,7 +338,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                   <ul className="overflow-hidden">
                     <li className="pl-6">
                       <div className="mt-1 mb-1 space-y-1 border-l-2 border-border/70 pl-2">
-                        {item.subItems.map((child) => {
+                        {subItems.map((child) => {
                           const childActive =
                             child.href !== undefined && child.href === pathname;
 
@@ -327,14 +398,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5 text-left transition-colors hover:bg-muted/60"
       >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-xs font-semibold text-primary">
-          AD
+          AW
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">
             Admin Wheels
           </span>
           <span className="block truncate text-[11px] text-muted-foreground">
-            Administrator
+            Kepala Toko
           </span>
         </span>
         <ChevronDown className="size-4 text-muted-foreground" />

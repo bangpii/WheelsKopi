@@ -147,7 +147,7 @@ export default function ReceiptPurchaseOrderPage() {
                     </td>
                     <td className={`${tdClass} text-center`}>
                       <div className="flex justify-center gap-2">
-                        <button type="button" className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20" title="Print receipt">
+                        <button type="button" className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90" title="Print receipt">
                           <Printer className="size-4" />
                         </button>
                         <button type="button" onClick={() => setViewing(receipt)} className="rounded-lg bg-muted p-2 text-muted-foreground hover:text-foreground" title="View receipt">

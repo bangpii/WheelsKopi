@@ -188,10 +188,10 @@ export default function SuppliersPage() {
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
                         {can("supplier", "edit") && (
-                          <button onClick={() => handleEditClick(s)} className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Edit className="size-4" /></button>
+                          <button onClick={() => handleEditClick(s)} className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90 transition-colors" title="Edit"><Edit className="size-4" /></button>
                         )}
                         {can("supplier", "delete") && (
-                          <button onClick={() => handleDelete(s.id)} className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
+                          <button onClick={() => handleDelete(s.id)} className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
                         )}
                       </div>
                     </td>

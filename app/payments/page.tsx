@@ -134,11 +134,11 @@ export default function PaymentsPage() {
                     <td className="px-5 py-4">
                       <div className="flex justify-center gap-2">
                         {can("payment", "edit") && (
-                          <button onClick={() => handleEditClick(p)} className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors" title="Edit"><Edit className="size-4" /></button>
+                          <button onClick={() => handleEditClick(p)} className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90 transition-colors" title="Edit"><Edit className="size-4" /></button>
                         )}
-                        <button onClick={() => setViewPayment(p)} className="rounded-lg bg-yellow-500/10 p-2 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400 transition-colors" title="Lihat History"><History className="size-4" /></button>
+                        <button onClick={() => setViewPayment(p)} className="rounded-lg bg-warning p-2 text-[#1f1402] hover:bg-warning/90 transition-colors" title="Lihat History"><History className="size-4" /></button>
                         {can("payment", "delete") && (
-                          <button onClick={() => handleDelete(p.id)} className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 dark:text-red-400 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
+                          <button onClick={() => handleDelete(p.id)} className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700 transition-colors" title="Hapus"><Trash2 className="size-4" /></button>
                         )}
                       </div>
                     </td>

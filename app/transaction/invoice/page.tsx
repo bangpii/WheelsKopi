@@ -156,7 +156,7 @@ export default function InvoicePage() {
                         <button
                           type="button"
                           onClick={() => openPreview(row)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-primary-soft px-2.5 py-1.5 text-xs font-semibold text-primary"
+                          className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground"
                         >
                           <FileText className="size-3.5" />
                           Preview

@@ -643,7 +643,7 @@ export default function PurchaseOrdersPage() {
                               type="button"
                               onClick={() => completePO(row)}
                               disabled={row.status === "Completed"}
-                              className="rounded-lg bg-success-soft p-2 text-success transition hover:bg-success/20 disabled:opacity-40"
+                              className="rounded-lg bg-success p-2 text-[#04150f] transition hover:bg-success/90 disabled:opacity-40"
                               title="Complete PO"
                             >
                               <Check className="size-4" />
@@ -661,7 +661,7 @@ export default function PurchaseOrdersPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(row.id)}
-                              className="rounded-lg bg-danger-soft p-2 text-danger transition hover:bg-danger/20"
+                              className="rounded-lg bg-red-600 p-2 text-white transition hover:bg-red-700"
                               title="Hapus"
                             >
                               <Trash2 className="size-4" />

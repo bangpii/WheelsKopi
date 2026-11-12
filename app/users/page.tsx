@@ -60,6 +60,12 @@ export default function UsersPage() {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
 
+  const defaultRole = roles.find((role) => role !== ADMIN_ROLE) ?? "";
+
+  const roleOptions = roles.filter(
+    (role) => role !== ADMIN_ROLE || isAdministrator || role === formData.role,
+  );
+
   const handleAddClick = () => {
     setEditingUser(null);
     setFormData({
@@ -67,7 +73,7 @@ export default function UsersPage() {
       email: "",
       username: "",
       password: "",
-      role: roles[0] || "",
+      role: defaultRole,
       phone: "",
       store: storeNames[0] ?? "",
       fotoKtp: "",
@@ -99,10 +105,26 @@ export default function UsersPage() {
   };
 
   const handleDelete = (id: string) => {
+    const target = users.find((user) => user.id === id);
+
+    if (target?.role === ADMIN_ROLE) {
+      alert("Akun Administrator tidak bisa dihapus.");
+
+      return;
+    }
+
     if (confirm("Hapus user ini?")) setUsers(users.filter((u) => u.id !== id));
   };
 
   const handleToggleStatus = (id: string) => {
+    const target = users.find((user) => user.id === id);
+
+    if (target?.role === ADMIN_ROLE) {
+      alert("Status akun Administrator tidak bisa diubah.");
+
+      return;
+    }
+
     setUsers(
       users.map((u) => {
         if (u.id === id) {
@@ -123,20 +145,31 @@ export default function UsersPage() {
       hariGajian: formData.hariGajian.trim() || "-",
     };
 
+    const role =
+      editingUser?.role === ADMIN_ROLE
+        ? ADMIN_ROLE
+        : formData.role === ADMIN_ROLE && !isAdministrator
+          ? defaultRole
+          : formData.role;
+
     if (editingUser) {
       const updatedUser: User = {
         ...editingUser,
         ...formData,
+        role,
         ...salary,
         password: formData.password || editingUser.password || "",
       };
+
       setUsers(users.map((u) => (u.id === editingUser.id ? updatedUser : u)));
     } else {
       const newUser: User = {
         id: `USR-${Date.now()}`,
         ...formData,
+        role,
         ...salary,
       };
+
       setUsers([...users, newUser]);
     }
 
@@ -154,7 +187,7 @@ export default function UsersPage() {
 
   const handleDeleteRole = (roleToDelete: string) => {
     if (roleToDelete === ADMIN_ROLE) {
-      alert("Role Kepala Toko tidak bisa dihapus.");
+      alert("Role Administrator tidak bisa dihapus.");
 
       return;
     }
@@ -182,6 +215,8 @@ export default function UsersPage() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
+      case "Administrator":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800";
       case "Kepala Toko":
         return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800";
       case "Finance":
@@ -317,8 +352,10 @@ export default function UsersPage() {
                     <td className="px-5 py-4 text-center">
                       <button
                         onClick={() => handleToggleStatus(user.id)}
-                        disabled={!can("user", "edit")}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${user.status === "Aktif" ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+                        disabled={
+                          !can("user", "edit") || user.role === ADMIN_ROLE
+                        }
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${user.status === "Aktif" ? "bg-success text-[#04150f] hover:bg-success/90" : "bg-red-600 text-white hover:bg-red-700"}`}
                       >
                         {user.status === "Aktif" ? (
                           <CheckCircle2 className="size-3" />
@@ -333,7 +370,7 @@ export default function UsersPage() {
                         {can("user", "edit") && (
                           <button
                             onClick={() => handleEditClick(user)}
-                            className="rounded-lg bg-primary/10 p-2 text-primary hover:bg-primary/20 transition-colors"
+                            className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90 transition-colors"
                           >
                             <Edit className="size-4" />
                           </button>
@@ -341,7 +378,13 @@ export default function UsersPage() {
                         {can("user", "delete") && (
                           <button
                             onClick={() => handleDelete(user.id)}
-                            className="rounded-lg bg-red-500/10 p-2 text-red-600 hover:bg-red-500/20 transition-colors dark:text-red-400"
+                            disabled={user.role === ADMIN_ROLE}
+                            title={
+                              user.role === ADMIN_ROLE
+                                ? "Akun Administrator tidak bisa dihapus"
+                                : undefined
+                            }
+                            className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <Trash2 className="size-4" />
                           </button>
@@ -442,9 +485,10 @@ export default function UsersPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, role: e.target.value })
                     }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-primary outline-none"
+                    disabled={editingUser?.role === ADMIN_ROLE}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-primary outline-none disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {roles.map((r: string) => (
+                    {roleOptions.map((r: string) => (
                       <option key={r} value={r}>
                         {r}
                       </option>

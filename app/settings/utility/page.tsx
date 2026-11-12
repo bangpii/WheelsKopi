@@ -70,6 +70,7 @@ export default function UtilityPage() {
     if (!editingRole) return;
 
     const permission = `${moduleId}_${action}`;
+
     const permissions = editingRole.permissions.includes(permission)
       ? editingRole.permissions.filter((entry) => entry !== permission)
       : [...editingRole.permissions, permission];
@@ -81,6 +82,7 @@ export default function UtilityPage() {
     if (!editingRole) return;
 
     const modulePermissions = actions.map((action) => `${moduleId}_${action}`);
+
     const allChecked = modulePermissions.every((permission) =>
       editingRole.permissions.includes(permission),
     );
@@ -98,9 +100,11 @@ export default function UtilityPage() {
     if (!editingRole) return;
 
     const modules = MODULE_GROUPS[selectedTab].modules;
+
     const tabPermissions = modules.flatMap((module) =>
       module.actions.map((action) => `${module.id}_${action}`),
     );
+
     const allChecked = tabPermissions.every((permission) =>
       editingRole.permissions.includes(permission),
     );
@@ -138,9 +142,11 @@ export default function UtilityPage() {
   };
 
   const selectedGroup = MODULE_GROUPS[selectedTab];
+
   const selectedTabPermissions = selectedGroup.modules.flatMap((module) =>
     module.actions.map((action) => `${module.id}_${action}`),
   );
+
   const selectedTabAllChecked =
     selectedTabPermissions.length > 0 &&
     selectedTabPermissions.every((permission) =>
@@ -162,7 +168,7 @@ export default function UtilityPage() {
                 </h1>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
                   Atur izin setiap role. Semua pengguna dengan role yang sama
-                  otomatis mengikuti izin ini. Hanya Kepala Toko yang dapat
+                  otomatis mengikuti izin ini. Hanya Administrator yang dapat
                   mengubah pengaturan.
                 </p>
               </div>
@@ -171,7 +177,7 @@ export default function UtilityPage() {
             <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-primary">
                 <LockKeyhole className="size-3.5" />
-                Kepala Toko only
+                Administrator only
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-muted-foreground">
                 <Users className="size-3.5" />
@@ -248,7 +254,7 @@ export default function UtilityPage() {
                           type="button"
                           onClick={() => openEditor(roleName)}
                           disabled={!isAdministrator || isAdminRole}
-                          className="inline-flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Edit3 className="size-3.5" />
                           Edit
@@ -323,6 +329,7 @@ export default function UtilityPage() {
                   const modulePermissions = module.actions.map(
                     (action) => `${module.id}_${action}`,
                   );
+
                   const allChecked = modulePermissions.every((permission) =>
                     editingRole.permissions.includes(permission),
                   );

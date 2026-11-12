@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Boxes,
-  Car,
   ChevronDown,
   ChevronRight,
   ChevronsRight,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCan, useIsAdministrator } from "@/lib/permissions";
+import { useCurrentUser } from "@/lib/use-current-user";
 
 interface NavSubItem {
   label: string;
@@ -99,13 +99,6 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    id: "mekanik",
-    label: "Halaman Mekanik",
-    icon: Car,
-    href: "/mekanik",
-    moduleId: "mekanik",
-  },
-  {
     id: "report",
     label: "Report",
     icon: BarChart3,
@@ -129,6 +122,17 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
+function initialsOf(name: string): string {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return initials || "?";
+}
+
 /** Id grup menu (yang punya submenu) yang berisi halaman aktif, jika ada. */
 function findActiveGroupId(pathname: string): string | undefined {
   return NAV_ITEMS.find((item) =>
@@ -143,6 +147,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const navRef = useRef<HTMLElement>(null);
   const can = useCan();
   const isAdministrator = useIsAdministrator();
+  const currentUser = useCurrentUser();
+  const displayName = currentUser.name || "Pengguna";
+  const displayRole = currentUser.role || "—";
 
   // Sidebar dibuat ulang di setiap halaman (AppShell ada di tiap page), jadi
   // state awalnya harus langsung benar: buka grup yang berisi halaman aktif.
@@ -249,6 +256,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isDashboard = item.target === "overview";
+
             const subItems = item.subItems?.filter(
               (child) => !child.moduleId || can(child.moduleId, "view"),
             );
@@ -398,14 +406,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5 text-left transition-colors hover:bg-muted/60"
       >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-xs font-semibold text-primary">
-          AW
+          {initialsOf(displayName)}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">
-            Admin Wheels
+            {displayName}
           </span>
           <span className="block truncate text-[11px] text-muted-foreground">
-            Kepala Toko
+            {displayRole}
           </span>
         </span>
         <ChevronDown className="size-4 text-muted-foreground" />

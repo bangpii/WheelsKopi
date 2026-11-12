@@ -316,7 +316,7 @@ export default function MechanicPage() {
                             <button
                               type="button"
                               onClick={() => updateStatus(row.id, "Selesai")}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-success-soft px-3 py-1.5 text-xs font-semibold text-success transition-transform hover:-translate-y-0.5"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-[#04150f] transition-transform hover:-translate-y-0.5"
                             >
                               <CheckCircle2 className="size-3.5" />
                               Selesai

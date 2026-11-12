@@ -192,7 +192,7 @@ export default function CustomersPage() {
                             <button
                               type="button"
                               onClick={() => openEdit(customer)}
-                              className="rounded-lg bg-primary-soft p-2 text-primary transition-colors hover:bg-primary/20"
+                              className="rounded-lg bg-primary p-2 text-primary-foreground transition-colors hover:bg-primary/90"
                               title="Edit"
                             >
                               <Pencil className="size-4" />
@@ -202,7 +202,7 @@ export default function CustomersPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(customer)}
-                              className="rounded-lg bg-danger-soft p-2 text-danger transition-colors hover:bg-danger/20"
+                              className="rounded-lg bg-red-600 p-2 text-white transition-colors hover:bg-red-700"
                               title="Hapus"
                             >
                               <Trash2 className="size-4" />

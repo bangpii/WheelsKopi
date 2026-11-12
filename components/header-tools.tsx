@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, LogOut, Search } from "lucide-react";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
+import { clearSession } from "@/lib/auth";
 import { useData } from "@/lib/context/data-context";
 import { moduleForPath, useCan } from "@/lib/permissions";
 import { PAGE_RESULTS } from "@/lib/search-routes";
 import type { SearchPage } from "@/lib/search-routes";
-
+import { useCurrentUser } from "@/lib/use-current-user";
+import type { CurrentUser } from "@/lib/use-current-user";
 
 const STORE_EVENT = "wheelskopi-store-change";
 
@@ -70,6 +73,7 @@ function useClickOutside(
     }
 
     const onPointerDown = (event: MouseEvent) => {
+      // SAFETY: a mousedown target from the document listener is always a Node.
       if (ref.current && !ref.current.contains(event.target as Node)) {
         onClose();
       }
@@ -199,6 +203,7 @@ export function GlobalSearch() {
   const choose = (entry: SearchPage) => {
     setOpen(false);
     setQuery("");
+
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -446,47 +451,6 @@ export function NotificationBell() {
 /* Profil                                                              */
 /* ------------------------------------------------------------------ */
 
-const SESSION_KEY = "wheelskopi_logged_in_user";
-
-interface Profile {
-  name: string;
-  role: string;
-  photo: string;
-}
-
-const DEFAULT_PROFILE: Profile = {
-  name: "Kepala Toko",
-  role: "Kepala Toko",
-  photo: "",
-};
-
-function parseProfile(raw: string | null): Profile {
-  if (!raw) {
-    return DEFAULT_PROFILE;
-  }
-
-  try {
-    // SAFETY: the session value is written by the login flow; every field is optional.
-    const session = JSON.parse(raw) as {
-      name?: string;
-      role?: string;
-      fotoKtp?: string;
-      photo?: string;
-    };
-
-    return {
-      name: session.name || DEFAULT_PROFILE.name,
-      role:
-        session.role === "Administrator"
-          ? "Kepala Toko"
-          : session.role || DEFAULT_PROFILE.role,
-      photo: session.photo || session.fotoKtp || "",
-    };
-  } catch {
-    return DEFAULT_PROFILE;
-  }
-}
-
 function initialsOf(name: string): string {
   return name
     .split(/\s+/)
@@ -496,16 +460,16 @@ function initialsOf(name: string): string {
     .join("");
 }
 
-function Avatar({ profile, size }: { profile: Profile; size: string }) {
+function Avatar({ user, size }: { user: CurrentUser; size: string }) {
   return (
     <span
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 font-display font-semibold text-primary ${size}`}
     >
-      {profile.photo ? (
+      {user.photo ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={profile.photo} alt={profile.name} className="size-full object-cover" />
+        <img src={user.photo} alt={user.name} className="size-full object-cover" />
       ) : (
-        initialsOf(profile.name)
+        initialsOf(user.name)
       )}
     </span>
   );
@@ -514,54 +478,68 @@ function Avatar({ profile, size }: { profile: Profile; size: string }) {
 export function ProfileMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const rawSession = useStoredRaw(SESSION_KEY);
-  const profile = useMemo(() => parseProfile(rawSession), [rawSession]);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const user = useCurrentUser();
+  const displayName = user.name || "Pengguna";
+  const displayRole = user.role || "—";
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const close = () => setOpen(false);
 
   useClickOutside(wrapRef, open, close);
 
-  const logout = () => {
-    writeStored(SESSION_KEY, null);
+  const performLogout = () => {
+    clearSession();
+    setConfirmLogout(false);
     setOpen(false);
-    router.push("/");
+    router.replace("/");
   };
 
   return (
-    <div ref={wrapRef} className="relative ml-1 border-l border-border pl-3">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label="Profil"
-        aria-expanded={open}
-        className="flex items-center gap-2.5 rounded-xl p-0.5 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-      >
-        <Avatar profile={profile} size="size-9 text-xs" />
-        <span className="hidden text-left leading-tight xl:block">
-          <span className="block text-sm font-semibold">{profile.name}</span>
-          <span className="block text-[11px] text-muted-foreground">{profile.role}</span>
-        </span>
-      </button>
+    <>
+      <div ref={wrapRef} className="relative ml-1 border-l border-border pl-3">
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label="Profil"
+          aria-expanded={open}
+          className="flex items-center gap-2.5 rounded-xl p-0.5 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Avatar user={user} size="size-9 text-xs" />
+          <span className="hidden text-left leading-tight xl:block">
+            <span className="block text-sm font-semibold">{displayName}</span>
+            <span className="block text-[11px] text-muted-foreground">{displayRole}</span>
+          </span>
+        </button>
 
-      {open && (
-        <div className="absolute top-full right-0 z-50 mt-2 w-64 rounded-2xl border border-border bg-popover p-4 shadow-2xl">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <Avatar profile={profile} size="size-16 text-lg" />
-            <div>
-              <p className="text-sm font-semibold">{profile.name}</p>
-              <p className="text-xs text-muted-foreground">{profile.role}</p>
+        {open && (
+          <div className="absolute top-full right-0 z-50 mt-2 w-64 rounded-2xl border border-border bg-popover p-4 shadow-2xl">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <Avatar user={user} size="size-16 text-lg" />
+              <div>
+                <p className="text-sm font-semibold">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{displayRole}</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setConfirmLogout(true);
+              }}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <LogOut className="size-4" /> Logout
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0"
-          >
-            <LogOut className="size-4" /> Logout
-          </button>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      <LogoutConfirmModal
+        open={confirmLogout}
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={performLogout}
+      />
+    </>
   );
 }

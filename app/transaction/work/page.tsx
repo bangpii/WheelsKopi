@@ -135,7 +135,7 @@ export default function WorkPage() {
                             <button
                               type="button"
                               onClick={() => approve(row.id)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-success-soft px-2.5 py-1.5 text-xs font-semibold text-success"
+                              className="inline-flex items-center gap-1 rounded-lg bg-success px-2.5 py-1.5 text-xs font-semibold text-[#04150f]"
                             >
                               <CheckCircle2 className="size-3.5" />
                               Approve

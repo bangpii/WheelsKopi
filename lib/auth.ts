@@ -7,7 +7,7 @@ export const SESSION_KEY = "wheelskopi_logged_in_user";
 export const STORE_EVENT = "wheelskopi-store-change";
 
 /** Role yang memiliki akses penuh dan satu-satunya yang boleh mengubah Utility. */
-export const ADMIN_ROLE = "Kepala Toko";
+export const ADMIN_ROLE = "Administrator";
 
 /** Role mekanik memakai halaman kerja terpisah. */
 export const MECHANIC_ROLE = "Mekanik";
@@ -45,7 +45,7 @@ export function authenticate(
   }
 
   if (user.status !== "Aktif") {
-    return { ok: false, message: "Akun ini tidak aktif. Hubungi Kepala Toko." };
+    return { ok: false, message: "Akun ini tidak aktif. Hubungi Administrator." };
   }
 
   return {
@@ -64,6 +64,16 @@ export function saveSession(session: AuthSession) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch {
     // Penyimpanan browser diblokir; sesi tidak dapat disimpan.
+  }
+
+  window.dispatchEvent(new Event(STORE_EVENT));
+}
+
+export function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Penyimpanan browser diblokir; sesi tidak dapat dihapus.
   }
 
   window.dispatchEvent(new Event(STORE_EVENT));
@@ -108,9 +118,10 @@ export function parseSessionRole(raw: string | null): string | undefined {
   if (!raw) return undefined;
 
   try {
+    // SAFETY: the value is written by saveSession(); role is optional here.
     const session = JSON.parse(raw) as { role?: string };
 
-    return session.role === "Administrator" ? ADMIN_ROLE : session.role;
+    return session.role;
   } catch {
     return undefined;
   }

@@ -8,7 +8,6 @@ export interface SearchPage {
 
 export const PAGE_RESULTS: SearchPage[] = [
   { id: "p-dashboard", group: "Halaman", title: "Dashboard", subtitle: "Ringkasan usaha", href: "/" },
-  { id: "p-mekanik", group: "Halaman", title: "Halaman Mekanik", subtitle: "Antrian pengerjaan kendaraan", href: "/mekanik" },
   { id: "p-distribusi", group: "Halaman", title: "Product Distributor", subtitle: "Stok gudang distributor", href: "/distribusi" },
   { id: "p-products", group: "Halaman", title: "Product Store", subtitle: "Stok produk toko", href: "/products" },
   { id: "p-others", group: "Halaman", title: "Others", subtitle: "Master Management", href: "/others" },

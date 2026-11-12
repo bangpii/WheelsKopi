@@ -60,8 +60,11 @@ export type {
   LibraryCarRecord,
   CommunityRecord,
 } from "@/lib/master-data";
+
 export type { CustomerRecord, DiscountRecord, ReceiptPORecord } from "@/lib/warehouse-data";
+
 export type { PurchaseOrderDetail } from "@/lib/purchase-data";
+
 export type { DistribusiItem } from "@/lib/distribusi-data";
 
 /* ------------------------------------------------------------------ */
@@ -147,6 +150,7 @@ export function toDistribusiItem(product: Product): DistribusiItem {
   const item: Partial<Product> = { ...product };
   delete item.kategoriUtama;
   delete item.history;
+
   // SAFETY: after removing the two Product-only fields, the remaining shape
   // matches DistribusiItem exactly (Product extends DistribusiItem).
   return item as DistribusiItem;
@@ -157,21 +161,37 @@ export function toDistribusiItem(product: Product): DistribusiItem {
 /* ------------------------------------------------------------------ */
 
 const EMPTY_KPIS: Kpi[] = [];
+
 const EMPTY_CUSTOMERS: CustomerRecord[] = [];
+
 const EMPTY_SUPPLIERS: SupplierRecord[] = [];
+
 const EMPTY_PRODUCTS: Product[] = [];
+
 const EMPTY_SELLOUTS: SelloutRecord[] = [];
+
 const EMPTY_MOVEMENTS: MovementRecord[] = [];
+
 const EMPTY_DAILY_SPENDS: DailySpendItemRecord[] = [];
+
 const EMPTY_TRADES: TradeRecord[] = [];
+
 const EMPTY_FINANCE_STORES: FinanceStoreDayRecord[] = [];
+
 const EMPTY_STORES: StoreRecord[] = [];
+
 const EMPTY_PAYMENTS: PaymentRecord[] = [];
+
 const EMPTY_SERVICES: ServiceRecord[] = [];
+
 const EMPTY_LIBRARY_CARS: LibraryCarRecord[] = [];
+
 const EMPTY_COMMUNITIES: CommunityRecord[] = [];
+
 const EMPTY_DISCOUNTS: DiscountRecord[] = [];
+
 const EMPTY_PURCHASE_ORDERS: PurchaseOrderDetail[] = [];
+
 const EMPTY_RECEIPTS: ReceiptPORecord[] = [];
 
 /* ------------------------------------------------------------------ */
@@ -240,8 +260,10 @@ function migrateSeedDataOnce() {
     if (localStorage.getItem(SEED_DATA_MIGRATION_KEY) === "1") return;
 
     const storedRolesRaw = localStorage.getItem(STORAGE_KEYS.roles);
+
     if (storedRolesRaw) {
       const storedRoles = JSON.parse(storedRolesRaw) as string[];
+
       const nextRoles = Array.from(
         new Set(
           storedRoles.map((role) =>
@@ -249,14 +271,17 @@ function migrateSeedDataOnce() {
           ),
         ),
       );
+
       localStorage.setItem(STORAGE_KEYS.roles, JSON.stringify(nextRoles));
     }
 
     const storedPermissionsRaw = localStorage.getItem(STORAGE_KEYS.permissions);
+
     if (storedPermissionsRaw) {
       const storedPermissions = JSON.parse(
         storedPermissionsRaw,
       ) as RolePermission[];
+
       const byRole = new Map<string, string[]>();
 
       for (const entry of storedPermissions) {
@@ -274,6 +299,7 @@ function migrateSeedDataOnce() {
         byRole,
         ([roleName, permissions]) => ({ roleName, permissions }),
       );
+
       localStorage.setItem(
         STORAGE_KEYS.permissions,
         JSON.stringify(nextPermissions),
@@ -281,12 +307,15 @@ function migrateSeedDataOnce() {
     }
 
     const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.users);
+
     const storedUsers = storedUsersRaw
       ? (JSON.parse(storedUsersRaw) as UserRecord[])
       : [];
+
     const seedByEmail = new Map(
       seedUsers.map((user) => [user.email.toLowerCase(), user]),
     );
+
     const mergedUsers = storedUsers.map((user) => {
       const seed = seedByEmail.get(user.email.toLowerCase());
 
@@ -296,6 +325,7 @@ function migrateSeedDataOnce() {
         ? { ...user, role: ADMIN_ROLE }
         : user;
     });
+
     const mergedEmails = new Set(
       mergedUsers.map((user) => user.email.toLowerCase()),
     );
@@ -310,6 +340,7 @@ function migrateSeedDataOnce() {
     localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(mergedUsers));
 
     const sessionRaw = localStorage.getItem(SESSION_KEY);
+
     if (sessionRaw) {
       const session = JSON.parse(sessionRaw) as { role?: string };
 
@@ -341,8 +372,10 @@ function migrateMechanicPermissionsOnce() {
     }
 
     const rawPermissions = localStorage.getItem(STORAGE_KEYS.permissions);
+
     if (rawPermissions) {
       const storedPermissions = JSON.parse(rawPermissions) as RolePermission[];
+
       const nextPermissions = storedPermissions.map((entry) => {
         if (entry.roleName !== "Mekanik") return entry;
 
@@ -368,10 +401,149 @@ function migrateMechanicPermissionsOnce() {
 
 migrateMechanicPermissionsOnce();
 
+const ADMIN_SPLIT_MIGRATION_KEY = "wheelskopi_v6_admin_split_v1";
+
+function migrateAdminRoleSplitOnce() {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (localStorage.getItem(ADMIN_SPLIT_MIGRATION_KEY) === "1") return;
+
+    const storedRolesRaw = localStorage.getItem(STORAGE_KEYS.roles);
+
+    if (storedRolesRaw) {
+      // SAFETY: the roles collection is always persisted as string[].
+      const storedRoles = JSON.parse(storedRolesRaw) as string[];
+      const nextRoles = Array.from(new Set([ADMIN_ROLE, ...storedRoles]));
+
+      localStorage.setItem(STORAGE_KEYS.roles, JSON.stringify(nextRoles));
+    }
+
+    const storedPermissionsRaw = localStorage.getItem(STORAGE_KEYS.permissions);
+
+    if (storedPermissionsRaw) {
+      // SAFETY: the permissions collection is always persisted as RolePermission[].
+      const storedPermissions = JSON.parse(
+        storedPermissionsRaw,
+      ) as RolePermission[];
+
+      const kepalaTokoDefault = defaultPermissions.find(
+        (entry) => entry.roleName === "Kepala Toko",
+      );
+
+      const byRole = new Map<string, string[]>();
+
+      for (const entry of storedPermissions) {
+        if (entry.roleName === ADMIN_ROLE) {
+          byRole.set(entry.roleName, []);
+          continue;
+        }
+
+        if (
+          entry.roleName === "Kepala Toko" &&
+          entry.permissions.length === 0 &&
+          kepalaTokoDefault
+        ) {
+          byRole.set(entry.roleName, [...kepalaTokoDefault.permissions]);
+          continue;
+        }
+
+        if (!byRole.has(entry.roleName)) {
+          byRole.set(entry.roleName, entry.permissions);
+        }
+      }
+
+      if (!byRole.has(ADMIN_ROLE)) {
+        byRole.set(ADMIN_ROLE, []);
+      }
+
+      const nextPermissions = Array.from(
+        byRole,
+        ([roleName, permissions]) => ({ roleName, permissions }),
+      );
+
+      localStorage.setItem(
+        STORAGE_KEYS.permissions,
+        JSON.stringify(nextPermissions),
+      );
+    }
+
+    const adminSeed = seedUsers.find((user) => user.role === ADMIN_ROLE);
+    const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.users);
+
+    // SAFETY: the users collection is always persisted as UserRecord[].
+    const storedUsers = storedUsersRaw
+      ? (JSON.parse(storedUsersRaw) as UserRecord[])
+      : [];
+
+    let knownUsers: UserRecord[] = seedUsers;
+
+    if (adminSeed && storedUsersRaw) {
+      const adminEmail = adminSeed.email.toLowerCase();
+
+      const nextUsers = storedUsers.map((user) => {
+        if (user.email.toLowerCase() === adminEmail) {
+          return { ...user, role: ADMIN_ROLE, status: "Aktif" as const };
+        }
+
+        if (user.role === ADMIN_ROLE) {
+          return { ...user, role: "Kepala Toko" };
+        }
+
+        return user;
+      });
+
+      if (!nextUsers.some((user) => user.email.toLowerCase() === adminEmail)) {
+        nextUsers.push({ ...adminSeed });
+      }
+
+      localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(nextUsers));
+      knownUsers = nextUsers;
+    }
+
+    const sessionRaw = localStorage.getItem(SESSION_KEY);
+
+    if (sessionRaw) {
+      // SAFETY: the session is written by saveSession(); every field is optional.
+      const session = JSON.parse(sessionRaw) as {
+        email?: string;
+        name?: string;
+        role?: string;
+        photo?: string;
+      };
+
+      const sessionEmail = (session.email ?? "").toLowerCase();
+
+      const matched = knownUsers.find(
+        (user) => user.email.toLowerCase() === sessionEmail,
+      );
+
+      if (matched) {
+        localStorage.setItem(
+          SESSION_KEY,
+          JSON.stringify({
+            ...session,
+            name: matched.name,
+            role: matched.role,
+            photo: matched.fotoKtp,
+          }),
+        );
+      }
+    }
+
+    localStorage.setItem(ADMIN_SPLIT_MIGRATION_KEY, "1");
+  } catch {
+    return;
+  }
+}
+
+migrateAdminRoleSplitOnce();
+
 function readStored<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
 
   const raw = localStorage.getItem(key);
+
   if (!raw) return fallback;
 
   try {
@@ -382,7 +554,9 @@ function readStored<T>(key: string, fallback: T): T {
 }
 
 const subscribeToClient = () => () => {};
+
 const getClientSnapshot = () => true;
+
 const getServerSnapshot = () => false;
 
 /**
@@ -398,10 +572,12 @@ function usePersistentCollection<T>(
     getClientSnapshot,
     getServerSnapshot,
   );
+
   const stored = useMemo(
     () => (isClient ? readStored(key, fallback) : fallback),
     [fallback, isClient, key],
   );
+
   const [override, setOverride] = useState<T | null>(null);
   const value = override ?? stored;
 
@@ -409,6 +585,7 @@ function usePersistentCollection<T>(
     (action) => {
       setOverride((current) => {
         const base = current ?? stored;
+
         return typeof action === "function"
           ? (action as (previous: T) => T)(base)
           : action;
@@ -463,69 +640,88 @@ export function DataProvider({ children }: { children: ReactNode }) {
     STORAGE_KEYS.kpis,
     EMPTY_KPIS,
   );
+
   const [customers, setCustomers, clientCustomers] = usePersistentCollection(
     STORAGE_KEYS.customers,
     EMPTY_CUSTOMERS,
   );
+
   const [suppliers, setSuppliers, clientSuppliers] = usePersistentCollection(
     STORAGE_KEYS.suppliers,
     EMPTY_SUPPLIERS,
   );
+
   const [products, setProducts, clientProducts] = usePersistentCollection(
     STORAGE_KEYS.products,
     EMPTY_PRODUCTS,
   );
+
   const [roles, setRoles, clientRoles] = usePersistentCollection(
     STORAGE_KEYS.roles,
     defaultRoles,
   );
+
   const [rolePermissions, setRolePermissions, clientPermissions] =
     usePersistentCollection(STORAGE_KEYS.permissions, defaultPermissions);
+
   const [users, setUsers, clientUsers] = usePersistentCollection(
     STORAGE_KEYS.users,
     seedUsers,
   );
+
   const [sellouts, setSellouts, clientSellouts] = usePersistentCollection(
     STORAGE_KEYS.sellouts,
     EMPTY_SELLOUTS,
   );
+
   const [movements, setMovements, clientMovements] = usePersistentCollection(
     STORAGE_KEYS.movements,
     EMPTY_MOVEMENTS,
   );
+
   const [dailySpends, setDailySpends, clientDailySpends] =
     usePersistentCollection(STORAGE_KEYS.dailySpends, EMPTY_DAILY_SPENDS);
+
   const [trades, setTrades, clientTrades] = usePersistentCollection(
     STORAGE_KEYS.trades,
     EMPTY_TRADES,
   );
+
   const [financeStores, setFinanceStores, clientFinanceStores] =
     usePersistentCollection(STORAGE_KEYS.financeStores, EMPTY_FINANCE_STORES);
+
   const [stores, setStores, clientStores] = usePersistentCollection(
     STORAGE_KEYS.stores,
     EMPTY_STORES,
   );
+
   const [payments, setPayments, clientPayments] = usePersistentCollection(
     STORAGE_KEYS.payments,
     EMPTY_PAYMENTS,
   );
+
   const [services, setServices, clientServices] = usePersistentCollection(
     STORAGE_KEYS.services,
     EMPTY_SERVICES,
   );
+
   const [libraryCars, setLibraryCars, clientLibraryCars] =
     usePersistentCollection(STORAGE_KEYS.libraryCars, EMPTY_LIBRARY_CARS);
+
   const [communities, setCommunities, clientCommunities] =
     usePersistentCollection(STORAGE_KEYS.communities, EMPTY_COMMUNITIES);
+
   const [discounts, setDiscounts, clientDiscounts] = usePersistentCollection(
     STORAGE_KEYS.discounts,
     EMPTY_DISCOUNTS,
   );
+
   const [purchaseOrders, setPurchaseOrders, clientPurchaseOrders] =
     usePersistentCollection(
       STORAGE_KEYS.purchaseOrders,
       EMPTY_PURCHASE_ORDERS,
     );
+
   const [receipts, setReceipts, clientReceipts] = usePersistentCollection(
     STORAGE_KEYS.receipts,
     EMPTY_RECEIPTS,
@@ -739,8 +935,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
 export function useData() {
   const context = useContext(DataContext);
+
   if (!context) {
     throw new Error("useData harus digunakan di dalam DataProvider");
   }
+
   return context;
 }

@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Home, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Home, LogOut, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { PAGE_RESULTS } from "@/lib/search-routes";
 
 interface RadarErrorPageProps {
@@ -12,6 +12,9 @@ interface RadarErrorPageProps {
   description: string;
   onRetry?: () => void;
   showReload?: boolean;
+  showNavigation?: boolean;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
 }
 
 const primaryButton =
@@ -81,6 +84,9 @@ export function RadarErrorPage({
   description,
   onRetry,
   showReload = false,
+  showNavigation = true,
+  primaryActionLabel = "Kembali ke Dashboard",
+  onPrimaryAction,
 }: RadarErrorPageProps) {
   const router = useRouter();
   const searchId = useId();
@@ -159,55 +165,59 @@ export function RadarErrorPage({
               {description}
             </p>
 
-            <form onSubmit={handleSearch} className="mt-7 max-w-xl">
-              <label htmlFor={searchId} className="sr-only">
-                Cari halaman
-              </label>
-              <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/80 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur">
-                <Search className="ml-3 size-4 shrink-0 text-muted-foreground" />
-                <input
-                  id={searchId}
-                  type="search"
-                  value={query}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setSearchError("");
-                  }}
-                  placeholder="Cari halaman tujuan..."
-                  className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground/70"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  Telusuri
-                </button>
-              </div>
-              {searchError && (
-                <p role="alert" className="mt-2 text-xs text-danger">
-                  {searchError}
-                </p>
-              )}
-            </form>
+            {showNavigation && (
+              <>
+                <form onSubmit={handleSearch} className="mt-7 max-w-xl">
+                  <label htmlFor={searchId} className="sr-only">
+                    Cari halaman
+                  </label>
+                  <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/80 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur">
+                    <Search className="ml-3 size-4 shrink-0 text-muted-foreground" />
+                    <input
+                      id={searchId}
+                      type="search"
+                      value={query}
+                      onChange={(event) => {
+                        setQuery(event.target.value);
+                        setSearchError("");
+                      }}
+                      placeholder="Cari halaman tujuan..."
+                      className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground/70"
+                    />
+                    <button
+                      type="submit"
+                      className="shrink-0 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                      Telusuri
+                    </button>
+                  </div>
+                  {searchError && (
+                    <p role="alert" className="mt-2 text-xs text-danger">
+                      {searchError}
+                    </p>
+                  )}
+                </form>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              {["Dashboard", "Sellout", "Halaman Mekanik"].map((label) => {
-                const page = PAGE_RESULTS.find((item) => item.title === label);
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {["Dashboard", "Sellout"].map((label) => {
+                    const page = PAGE_RESULTS.find((item) => item.title === label);
 
-                if (!page) return null;
+                    if (!page) return null;
 
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => router.push(page.href)}
-                    className="rounded-full border border-border bg-card/60 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => router.push(page.href)}
+                        className="rounded-full border border-border bg-card/60 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             <div className="mt-7 flex flex-wrap gap-3">
               {onRetry ? (
@@ -218,11 +228,15 @@ export function RadarErrorPage({
               ) : (
                 <button
                   type="button"
-                  onClick={() => router.push("/")}
+                  onClick={onPrimaryAction ?? (() => router.push("/"))}
                   className={primaryButton}
                 >
-                  <Home className="size-4" />
-                  Kembali ke Dashboard
+                  {onPrimaryAction ? (
+                    <LogOut className="size-4" />
+                  ) : (
+                    <Home className="size-4" />
+                  )}
+                  {primaryActionLabel}
                 </button>
               )}
               {onRetry && (

@@ -173,7 +173,7 @@ export default function SelloutGlobalPage() {
                     <td className={`${tdClass} text-center`}>
                       <div className="flex justify-center gap-2">
                         {can("sellout-global", "edit") && (
-                          <button type="button" onClick={() => openEdit(row)} className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20" title="Edit">
+                          <button type="button" onClick={() => openEdit(row)} className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90" title="Edit">
                             <Pencil className="size-4" />
                           </button>
                         )}
@@ -181,7 +181,7 @@ export default function SelloutGlobalPage() {
                           <Printer className="size-4" />
                         </button>
                         {can("sellout-global", "delete") && (
-                          <button type="button" onClick={() => setRows(rows.filter((entry) => entry.id !== row.id))} className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20" title="Hapus">
+                          <button type="button" onClick={() => setRows(rows.filter((entry) => entry.id !== row.id))} className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700" title="Hapus">
                             <Trash2 className="size-4" />
                           </button>
                         )}

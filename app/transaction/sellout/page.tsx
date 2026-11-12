@@ -335,7 +335,7 @@ export default function SelloutPage() {
                           <button
                             type="button"
                             onClick={() => handleDelete(row.id)}
-                            className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20"
+                            className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
                             title="Hapus"
                           >
                             <Trash2 className="size-4" />

@@ -293,7 +293,7 @@ export default function DiscountsPage() {
                               <button
                                 type="button"
                                 onClick={() => openEdit(discount)}
-                                className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20"
+                                className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90"
                                 title="Edit"
                               >
                                 <Pencil className="size-4" />
@@ -303,7 +303,7 @@ export default function DiscountsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleDelete(discount)}
-                                className="rounded-lg bg-danger-soft p-2 text-danger hover:bg-danger/20"
+                                className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
                                 title="Hapus"
                               >
                                 <Trash2 className="size-4" />
@@ -426,7 +426,7 @@ export default function DiscountsPage() {
                     aria-pressed={form.status === "Aktif"}
                     className={`flex h-[42px] w-full items-center justify-between rounded-xl border px-3 text-sm font-semibold transition-colors ${
                       form.status === "Aktif"
-                        ? "border-success/30 bg-success-soft text-success"
+                        ? "border-success bg-success text-[#04150f] hover:bg-success/90"
                         : "border-border bg-muted/60 text-muted-foreground"
                     }`}
                   >

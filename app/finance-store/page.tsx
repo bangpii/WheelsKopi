@@ -478,7 +478,7 @@ export default function FinanceStorePage() {
                               type="button"
                               onClick={() => openEdit(row)}
                               disabled={row.status === "Closed"}
-                              className="rounded-lg bg-primary-soft p-2 text-primary hover:bg-primary/20 disabled:opacity-40"
+                              className="rounded-lg bg-primary p-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                               title={
                                 row.status === "Closed"
                                   ? "Transaksi sudah ditutup"

@@ -32,7 +32,7 @@ function AccessDenied() {
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Role Anda tidak memiliki izin untuk membuka halaman ini. Hubungi
-          Kepala Toko jika Anda membutuhkan akses.
+          Administrator jika Anda membutuhkan akses.
         </p>
         <Link
           href="/"
@@ -51,6 +51,7 @@ export function AppShell({ children }: AppShellProps) {
   const can = useCan();
   const isAdministrator = useIsAdministrator();
   const requiredModule = moduleForPath(pathname);
+
   const denied = isAdminOnlyPath(pathname)
     ? !isAdministrator
     : requiredModule

@@ -105,7 +105,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={handleResetData}
                 title="Hapus Semua Data"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700"
               >
                 <Trash2 className="size-3.5" />
                 Reset Data

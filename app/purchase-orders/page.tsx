@@ -267,6 +267,7 @@ const toDisplayDate = (value: string) => {
   if (!value) return "-";
 
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleDateString("id-ID", {
@@ -278,6 +279,7 @@ const toDisplayDate = (value: string) => {
 
 const monthOf = (value: string) => {
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "-";
 
   return date.toLocaleDateString("id-ID", { month: "long" });
@@ -285,14 +287,19 @@ const monthOf = (value: string) => {
 
 function Field({
   label,
+  required,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
     <label className="space-y-1.5 text-sm">
-      <span className="font-medium">{label}</span>
+      <span className="font-medium">
+        {label}
+        {required && <span className="ml-0.5 text-danger">*</span>}
+      </span>
       {children}
     </label>
   );
@@ -307,6 +314,7 @@ export default function PurchaseOrdersPage() {
     setFinanceStores,
     storeNames,
   } = useData();
+
   const can = useCan();
   const [activeTab, setActiveTab] = useState<Category>("Ban");
   const [query, setQuery] = useState("");
@@ -327,6 +335,7 @@ export default function PurchaseOrdersPage() {
 
     return details.filter((row) => {
       if (row.category !== activeTab) return false;
+
       if (!normalized) return true;
 
       return [
@@ -367,8 +376,26 @@ export default function PurchaseOrdersPage() {
   const modalPerSet = qty > 0 ? Math.round(subTotal / qty) : 0;
   const modalToko = modalPerSet + (Number(form.up) || 0);
 
+  const generateKodeBarang = () => {
+    const prefix = form.category === "Ban" ? "BN" : "OT";
+    const stamp = Date.now().toString().slice(-6);
+    const seq = String(details.length + 1).padStart(3, "0");
+
+    return `${prefix}-${stamp}${seq}`;
+  };
+
   const openCreate = () => {
-    setForm({ ...emptyForm, deliverTo: storeNames[0] ?? "" });
+    const nextCategory = activeTab;
+    const prefix = nextCategory === "Ban" ? "BN" : "OT";
+    const stamp = Date.now().toString().slice(-6);
+    const seq = String(details.length + 1).padStart(3, "0");
+    setForm({
+      ...emptyForm,
+      category: nextCategory,
+      item: nextCategory === "Ban" ? "Ban" : "Velg",
+      deliverTo: storeNames[0] ?? "",
+      kodeBarang: `${prefix}-${stamp}${seq}`,
+    });
     setError("");
     setIsOpen(true);
   };
@@ -378,40 +405,48 @@ export default function PurchaseOrdersPage() {
 
     if (!form.supplier) {
       setError("Supplier wajib dipilih.");
+
       return;
     }
 
     if (!form.deliverTo || !form.invoiceNumber.trim()) {
       setError("Deliver To dan Invoice Number wajib diisi.");
+
       return;
     }
 
     if (!form.kodeBarang.trim() || qty <= 0) {
       setError("Kode Barang dan Qty wajib diisi.");
+
       return;
     }
 
     if (form.shippingFee.trim() === "" || shippingFee < 0) {
       setError("Shipping Fee wajib diisi (0 jika tidak ada).");
+
       return;
     }
 
     if (additionalDiscount > totalPrice) {
       setError("Additional discount tidak boleh melebihi total price.");
+
       return;
     }
 
     const number = form.nomorBon.trim()
       ? `PO-${form.nomorBon.trim()}`
       : `PO-${form.invoiceNumber.trim()}`;
+
     const record: PurchaseDetail = {
       id: `PO-${form.invoiceNumber.trim()}-${details.length + 1}`,
       number,
+      // SAFETY: category is constrained by the select options to Ban|Others.
       category: form.category as Category,
       bulan: monthOf(form.date),
       date: toDisplayDate(form.date),
       deliverTo: form.deliverTo,
       invoiceNumber: form.invoiceNumber.trim(),
+      // SAFETY: lunas is constrained by the select options to Lunas|Tidak Lunas.
       lunas: form.lunas as PurchaseDetail["lunas"],
       kodeBarang: form.kodeBarang.trim(),
       supplier: form.supplier,
@@ -496,7 +531,9 @@ export default function PurchaseOrdersPage() {
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Hapus purchase order ini?")) return;
+
     const target = details.find((row) => row.id === id);
+
     if (target?.received) {
       setProducts((current) =>
         current.map((product) =>
@@ -507,6 +544,7 @@ export default function PurchaseOrdersPage() {
         ),
       );
     }
+
     setDetails((current) => current.filter((row) => row.id !== id));
   };
 
@@ -706,6 +744,9 @@ export default function PurchaseOrdersPage() {
                     value={form.category}
                     onChange={(event) => {
                       const category = event.target.value;
+                      const prefix = category === "Ban" ? "BN" : "OT";
+                      const stamp = Date.now().toString().slice(-6);
+                      const seq = String(details.length + 1).padStart(3, "0");
                       setForm((current) => ({
                         ...current,
                         category,
@@ -715,6 +756,7 @@ export default function PurchaseOrdersPage() {
                             : current.item === "Ban"
                               ? "Velg"
                               : current.item,
+                        kodeBarang: `${prefix}-${stamp}${seq}`,
                       }));
                     }}
                     className={inputClass}
@@ -732,20 +774,24 @@ export default function PurchaseOrdersPage() {
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Deliver To">
+                <Field label="Deliver To" required>
                   <select
+                    required
                     value={form.deliverTo}
                     onChange={(event) =>
                       update("deliverTo", event.target.value)
                     }
                     className={inputClass}
                   >
+                    <option value="">Pilih lokasi tujuan</option>
                     {storeNames.map((store) => (
-                      <option key={store}>{store}</option>
+                      <option key={store} value={store}>
+                        {store}
+                      </option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Invoice Number">
+                <Field label="Invoice Number" required>
                   <input
                     required
                     value={form.invoiceNumber}
@@ -753,6 +799,7 @@ export default function PurchaseOrdersPage() {
                       update("invoiceNumber", event.target.value)
                     }
                     className={inputClass}
+                    placeholder="Masukkan nomor invoice"
                   />
                 </Field>
                 <Field label="Lunas">
@@ -780,17 +827,27 @@ export default function PurchaseOrdersPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="Kode Barang">
-                  <input
-                    required
-                    value={form.kodeBarang}
-                    onChange={(event) =>
-                      update("kodeBarang", event.target.value)
-                    }
-                    className={inputClass}
-                  />
+                <Field label="Kode Barang" required>
+                  <div className="flex gap-2">
+                    <input
+                      required
+                      value={form.kodeBarang}
+                      onChange={(event) =>
+                        update("kodeBarang", event.target.value)
+                      }
+                      className={inputClass}
+                      placeholder="Otomatis / isi manual"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => update("kodeBarang", generateKodeBarang())}
+                      className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted"
+                    >
+                      Auto
+                    </button>
+                  </div>
                 </Field>
-                <Field label="Supplier">
+                <Field label="Supplier" required>
                   <select
                     required
                     value={form.supplier}
@@ -862,7 +919,7 @@ export default function PurchaseOrdersPage() {
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Qty">
+                <Field label="Qty" required>
                   <input
                     type="number"
                     min={1}
@@ -895,15 +952,31 @@ export default function PurchaseOrdersPage() {
                   />
                 </Field>
                 <Field label="Additional Discount (Rp)">
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.additionalDiscount}
-                    onChange={(event) =>
-                      update("additionalDiscount", event.target.value)
-                    }
-                    className={inputClass}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.additionalDiscount}
+                      onChange={(event) =>
+                        update("additionalDiscount", event.target.value)
+                      }
+                      className={inputClass}
+                      placeholder="Otomatis / isi manual"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        update(
+                          "additionalDiscount",
+                          String(Math.round((totalPrice * cashbackPercent) / 100)),
+                        )
+                      }
+                      className="shrink-0 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted"
+                      title="Isi otomatis dari cashback"
+                    >
+                      Auto
+                    </button>
+                  </div>
                 </Field>
                 <Field label="Cashback (%)">
                   <input
@@ -1056,12 +1129,12 @@ export default function PurchaseOrdersPage() {
                   ["Modal/Set", modalPerSet],
                   ["Modal Toko", modalToko],
                 ].map(([label, value]) => (
-                  <div key={label as string}>
+                  <div key={String(label)}>
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
                       {label}
                     </p>
                     <p className="mt-1 text-sm font-semibold tabular-nums">
-                      {money(value as number)}
+                      {money(Number(value))}
                     </p>
                   </div>
                 ))}

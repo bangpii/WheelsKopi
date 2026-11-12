@@ -60,10 +60,12 @@ function isoWeekKey(value: string) {
   const target = new Date(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
   );
+
   const dayNumber = target.getUTCDay() || 7;
   target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
 
   const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+
   const weekNumber = Math.ceil(
     ((target.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
   );
@@ -79,6 +81,7 @@ export default function DailySpendPage() {
     setFinanceStores,
     storeNames,
   } = useData();
+
   const can = useCan();
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState<SpendForm>(emptyForm);
@@ -87,19 +90,36 @@ export default function DailySpendPage() {
   const employees = users.filter(
     (user) => user.status === "Aktif" && user.store === form.store,
   );
+
   const selectedEmployee = users.find((user) => user.id === form.employeeId);
+
   const salaryPeriod = selectedEmployee
     ? selectedEmployee.periodeGaji === "Mingguan"
       ? isoWeekKey(form.date)
       : form.date.slice(0, 7)
     : "";
+
   const salaryPeriodLabel = selectedEmployee
     ? `${selectedEmployee.periodeGaji} ${salaryPeriod}`
     : "";
 
-  const spooringCut = (Number(form.spooring) || 0) * 0.3;
+  const spooringValue = Number(form.spooring) || 0;
   const salary = Number(form.salary) || 0;
   const amount = Number(form.amount) || 0;
+
+  const monthKey = form.date ? form.date.slice(0, 7) : "";
+
+  const monthlySpooringTotal =
+    records
+      .filter(
+        (row) =>
+          row.store === form.store &&
+          (row.dateISO ?? row.date).slice(0, 7) === monthKey,
+      )
+      .reduce((sum, row) => sum + row.spooring, 0) + spooringValue;
+
+  const spooringCut = spooringValue * 0.3;
+  const monthlySpooringCut = monthlySpooringTotal * 0.3;
   const total = amount + salary - spooringCut;
 
   const openCreate = () => {
@@ -117,16 +137,19 @@ export default function DailySpendPage() {
 
     if (!form.description.trim()) {
       setError("Description wajib diisi.");
+
       return;
     }
 
     if (amount <= 0 && salary <= 0) {
       setError("Isi nominal spend atau gaji.");
+
       return;
     }
 
     if (salary > 0 && !selectedEmployee) {
       setError("Pilih karyawan dari List Karyawan jika mengisi gaji.");
+
       return;
     }
 
@@ -142,6 +165,7 @@ export default function DailySpendPage() {
       setError(
         `Gaji ${selectedEmployee.name} untuk periode ${salaryPeriodLabel} sudah diinput.`,
       );
+
       return;
     }
 
@@ -166,6 +190,7 @@ export default function DailySpendPage() {
     };
 
     const next = [record, ...records];
+
     setRecords(next);
     setFinanceStores((current) =>
       upsertFinanceLedger(current, {
@@ -191,8 +216,10 @@ export default function DailySpendPage() {
               Daily Spend
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Input pengeluaran harian toko. Total spend dikurangi 30% dari
-              transaksi spooring pada hari tersebut, lalu ditambah gaji jika ada.
+              Input pengeluaran harian toko. Potongan spooring 30% dihitung per
+              transaksi dan diakumulasikan per bulan (total potongan bulanan =
+              30% dari total spooring bulan berjalan), lalu ditambah gaji jika
+              ada.
             </p>
           </div>
           {can("daily-spend", "input") && (
@@ -368,7 +395,7 @@ export default function DailySpendPage() {
                   />
                 </label>
                 <label className="space-y-1.5 text-sm">
-                  <span className="font-medium">Transaksi Spooring (Rp)</span>
+                  <span className="font-medium">Transaksi Spooring Hari Ini (Rp)</span>
                   <input
                     type="number"
                     min={0}
@@ -387,6 +414,7 @@ export default function DailySpendPage() {
                       const employee = users.find(
                         (user) => user.id === event.target.value,
                       );
+
                       setForm({
                         ...form,
                         employeeId: event.target.value,
@@ -424,11 +452,27 @@ export default function DailySpendPage() {
                 </label>
               </div>
 
-              <div className="rounded-2xl border border-border bg-muted/40 p-4">
+              <div className="rounded-2xl border border-border bg-muted/40 p-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <span className="text-muted-foreground">
+                    Potongan spooring hari ini (30%)
+                  </span>
+                  <span className="font-mono font-semibold">
+                    -{rupiah.format(spooringCut)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Akumulasi spooring bulan ini / potongan 30%
+                  </span>
+                  <span className="font-mono text-xs sm:text-sm font-semibold">
+                    {rupiah.format(monthlySpooringTotal)} / -{rupiah.format(monthlySpooringCut)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-border/70 pt-2 text-sm">
+                  <span className="inline-flex items-center gap-2 font-medium">
                     <Wallet className="size-4" />
-                    Total setelah 30% spooring + gaji
+                    Total hari ini (spend + gaji - 30% spooring)
                   </span>
                   <span className="font-mono text-lg font-semibold">
                     {rupiah.format(total)}

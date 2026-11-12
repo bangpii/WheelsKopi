@@ -111,7 +111,31 @@ export function RegisterProductModal({
   const [formData, setFormData] = useState<DistribusiFormValues>(() =>
     createInitialForm(initialData, suppliers, initialSubKategori),
   );
+
   const [error, setError] = useState("");
+
+  const [brandOptions, setBrandOptions] = useState<string[]>(() => {
+    const merged = [...BAN_BRAND_LIST];
+
+    if (initialData?.merekBan && !merged.includes(initialData.merekBan)) {
+      merged.push(initialData.merekBan);
+    }
+
+    return merged;
+  });
+
+  const [ringOptions, setRingOptions] = useState<string[]>(() => {
+    const merged = [...BAN_RING_OPTIONS];
+    const ring = initialData?.ring;
+
+    if (ring && !merged.includes(ring)) {
+      merged.push(ring);
+    }
+
+    return merged;
+  });
+
+  const [customTypes, setCustomTypes] = useState<Record<string, string[]>>({});
 
   const isBan = formData.kategori === "Ban";
   const isVelg = !isBan && formData.subKategori === "Velg";
@@ -122,12 +146,13 @@ export function RegisterProductModal({
   };
 
   const switchCategory = (kategori: DistribusiCategory) => {
-    update({
-      kategori,
-      ...(kategori === "Others" && !formData.subKategori
-        ? { subKategori: "Velg" }
-        : {}),
-    });
+    const patch: Partial<DistribusiFormValues> = { kategori };
+
+    if (kategori === "Others" && !formData.subKategori) {
+      patch.subKategori = "Velg";
+    }
+
+    update(patch);
   };
 
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -138,11 +163,13 @@ export function RegisterProductModal({
 
     if (!file.type.startsWith("image/")) {
       setError("File yang diupload harus berupa gambar.");
+
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
       setError("Ukuran gambar maksimal 2MB.");
+
       return;
     }
 
@@ -150,41 +177,57 @@ export function RegisterProductModal({
     reader.onload = () => {
       update({ gambar: String(reader.result ?? "") });
     };
+
     reader.readAsDataURL(file);
   };
 
   const validate = (): string => {
     if (!formData.supplier.trim()) return "Supplier wajib dipilih.";
+
     if (!formData.stok.trim() || Number(formData.stok) < 0) {
       return "Stok wajib diisi dengan angka 0 atau lebih.";
     }
+
     if (!formData.gambar && !initialData?.gambar) {
       return "Upload gambar produk terlebih dahulu.";
     }
 
     if (isBan) {
       if (!formData.merekBan?.trim()) return "Merek ban wajib dipilih.";
+
       if (!formData.typeBan?.trim()) return "Type ban wajib dipilih.";
+
       if (!formData.ring?.trim()) return "Ring wajib dipilih.";
+
       if (!formData.ukuranTapak?.trim()) return "Tapak/lebar wajib diisi.";
+
       if (!formData.ukuranTinggi?.trim()) return "Tinggi wajib diisi.";
+
       return "";
     }
 
     if (!formData.subKategori) return "Jenis produk wajib dipilih.";
+
     if (!formData.merekProduk?.trim()) return "Merek produk wajib diisi.";
 
     if (isVelg) {
       if (!formData.typeVelg?.trim()) return "Type velg wajib diisi.";
+
       if (!formData.ring?.trim()) return "Ring wajib dipilih.";
+
       if (!formData.wide?.trim()) return "Wide wajib diisi.";
+
       if (!formData.hole?.trim()) return "Hole wajib diisi.";
+
       if (!formData.et?.trim()) return "ET wajib diisi.";
+
       if (!formData.colour?.trim()) return "Colour wajib diisi.";
+
       return "";
     }
 
     if (!formData.keterangan?.trim()) return "Keterangan wajib diisi.";
+
     return "";
   };
 
@@ -192,8 +235,10 @@ export function RegisterProductModal({
     event.preventDefault();
 
     const message = validate();
+
     if (message) {
       setError(message);
+
       return;
     }
 
@@ -231,13 +276,48 @@ export function RegisterProductModal({
     });
   };
 
-  const typeOptions = formData.merekBan
-    ? BAN_BRANDS[formData.merekBan] ?? []
-    : [];
+  const baseTypes = formData.merekBan ? BAN_BRANDS[formData.merekBan] ?? [] : [];
+  const extraTypes = formData.merekBan ? customTypes[formData.merekBan] ?? [] : [];
+  const typeOptions = Array.from(new Set([...baseTypes, ...extraTypes]));
+
   const typeSelectOptions =
     formData.typeBan && !typeOptions.includes(formData.typeBan)
       ? [formData.typeBan, ...typeOptions]
       : typeOptions;
+
+  const registerBrand = (value: string) => {
+    const brand = value.trim();
+
+    if (!brand) return;
+    setBrandOptions((current) =>
+      current.includes(brand) ? current : [...current, brand],
+    );
+  };
+
+  const registerType = (brand: string, value: string) => {
+    const type = value.trim();
+
+    if (!brand || !type) return;
+    setCustomTypes((current) => {
+      const existing = current[brand] ?? [];
+
+      if (existing.includes(type) || (BAN_BRANDS[brand] ?? []).includes(type)) {
+        return current;
+      }
+
+      return { ...current, [brand]: [...existing, type] };
+    });
+  };
+
+  const registerRing = (value: string) => {
+    const ring = value.trim();
+
+    if (!ring) return;
+
+    setRingOptions((current) =>
+      current.includes(ring) ? current : [...current, ring],
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-6">
@@ -293,6 +373,7 @@ export function RegisterProductModal({
               {(["Ban", "Others"] as const).map((tab) => {
                 const TabIcon = tab === "Ban" ? Disc3 : Box;
                 const active = formData.kategori === tab;
+
                 return (
                   <button
                     key={tab}
@@ -315,62 +396,71 @@ export function RegisterProductModal({
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label>
                   <span className={labelClass}>Merek Ban</span>
-                  <select
+                  <input
+                    list="ban-brand-options"
                     value={formData.merekBan ?? ""}
-                    onChange={(event) =>
-                      update({
-                        merekBan: event.target.value,
-                        typeBan: "",
-                      })
-                    }
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      update({ merekBan: value, typeBan: "" });
+
+                      if (brandOptions.includes(value)) return;
+                    }}
+                    onBlur={() => registerBrand(formData.merekBan ?? "")}
                     className={fieldClass}
-                  >
-                    <option value="">Pilih merek ban</option>
-                    {BAN_BRAND_LIST.map((brand) => (
-                      <option key={brand} value={brand}>
-                        {brand}
-                      </option>
+                    placeholder="Pilih / ketik merek baru"
+                  />
+                  <datalist id="ban-brand-options">
+                    {brandOptions.map((brand) => (
+                      <option key={brand} value={brand} />
                     ))}
-                  </select>
+                  </datalist>
+                  <span className="mt-1 block text-[10px] text-muted-foreground">
+                    Bisa pilih dari daftar atau ketik merek baru.
+                  </span>
                 </label>
 
                 <label>
                   <span className={labelClass}>Type Ban</span>
-                  <select
+                  <input
+                    list="ban-type-options"
                     value={formData.typeBan ?? ""}
-                    onChange={(event) =>
-                      update({ typeBan: event.target.value })
+                    onChange={(event) => update({ typeBan: event.target.value })}
+                    onBlur={() =>
+                      registerType(formData.merekBan ?? "", formData.typeBan ?? "")
                     }
                     className={fieldClass}
-                    disabled={typeSelectOptions.length === 0}
-                  >
-                    <option value="">
-                      {formData.merekBan
-                        ? "Pilih type ban"
-                        : "Pilih merek terlebih dahulu"}
-                    </option>
+                    placeholder={
+                      formData.merekBan
+                        ? "Pilih / ketik type baru"
+                        : "Pilih merek terlebih dahulu"
+                    }
+                    disabled={!formData.merekBan?.trim()}
+                  />
+                  <datalist id="ban-type-options">
                     {typeSelectOptions.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
+                      <option key={type} value={type} />
                     ))}
-                  </select>
+                  </datalist>
+                  <span className="mt-1 block text-[10px] text-muted-foreground">
+                    Bisa pilih dari daftar atau ketik type baru.
+                  </span>
                 </label>
 
                 <label>
                   <span className={labelClass}>Ring</span>
-                  <select
+                  <input
+                    list="ring-options-ban"
                     value={formData.ring ?? ""}
                     onChange={(event) => update({ ring: event.target.value })}
+                    onBlur={() => registerRing(formData.ring ?? "")}
                     className={fieldClass}
-                  >
-                    <option value="">Pilih ring</option>
-                    {BAN_RING_OPTIONS.map((ring) => (
-                      <option key={ring} value={ring}>
-                        {ring}
-                      </option>
+                    placeholder="Pilih / ketik ring"
+                  />
+                  <datalist id="ring-options-ban">
+                    {ringOptions.map((ring) => (
+                      <option key={ring} value={ring} />
                     ))}
-                  </select>
+                  </datalist>
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -523,20 +613,19 @@ export function RegisterProductModal({
 
                     <label>
                       <span className={labelClass}>Ring</span>
-                      <select
+                      <input
+                        list="ring-options-velg"
                         value={formData.ring ?? ""}
-                        onChange={(event) =>
-                          update({ ring: event.target.value })
-                        }
+                        onChange={(event) => update({ ring: event.target.value })}
+                        onBlur={() => registerRing(formData.ring ?? "")}
                         className={fieldClass}
-                      >
-                        <option value="">Pilih ring</option>
-                        {BAN_RING_OPTIONS.map((ring) => (
-                          <option key={ring} value={ring}>
-                            {ring}
-                          </option>
+                        placeholder="Pilih / ketik ring"
+                      />
+                      <datalist id="ring-options-velg">
+                        {ringOptions.map((ring) => (
+                          <option key={ring} value={ring} />
                         ))}
-                      </select>
+                      </datalist>
                     </label>
 
                     <label>
@@ -603,21 +692,6 @@ export function RegisterProductModal({
                         value={formData.stok}
                         onChange={(event) =>
                           update({ stok: event.target.value })
-                        }
-                        placeholder="0"
-                        inputMode="numeric"
-                        type="number"
-                        min={0}
-                        className={fieldClass}
-                      />
-                    </label>
-
-                    <label>
-                      <span className={labelClass}>Standar Price</span>
-                      <input
-                        value={formData.standarPrice ?? ""}
-                        onChange={(event) =>
-                          update({ standarPrice: event.target.value })
                         }
                         placeholder="0"
                         inputMode="numeric"

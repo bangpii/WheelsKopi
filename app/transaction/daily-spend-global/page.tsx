@@ -74,7 +74,9 @@ export default function DailySpendGlobalPage() {
           <p className="font-mono text-[11px] tracking-[0.28em] text-primary uppercase">Transaction Global</p>
           <h1 className="font-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Daily Spend Global</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Revisi data daily spend yang sudah tercatat. Nomor daily boleh dikosongkan pada revisi.
+            Revisi data daily spend yang sudah tercatat. Nomor daily boleh
+            dikosongkan pada revisi. Potongan spooring tetap 30% (akumulasi
+            bulanan = total potongan 30% dari total spooring bulan berjalan).
           </p>
         </header>
 

@@ -591,7 +591,7 @@ export default function PurchaseOrdersPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="glow-surface overflow-hidden rounded-2xl border border-border bg-card">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[3800px] border-collapse">
               <thead>

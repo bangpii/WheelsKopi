@@ -137,7 +137,7 @@ export function KpiGrid({ startDate, endDate }: KpiGridProps) {
             <article
               data-aos="fade-up"
               data-aos-delay={index * 70}
-              className="surface group relative h-full cursor-pointer overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-(--shadow-lift)"
+              className="glow-surface surface group relative h-full cursor-pointer overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-(--shadow-lift)"
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-[13px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">

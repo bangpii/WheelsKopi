@@ -107,7 +107,7 @@ export function RevenueCard({ startDate, endDate }: RevenueCardProps) {
   const area = `${line}L${last[0]},${HEIGHT}L${first[0]},${HEIGHT}Z`;
 
   return (
-    <section data-aos="fade-up" className="surface flex flex-col p-5 sm:p-6 lg:col-span-8" aria-label="Performa penjualan">
+    <section data-aos="fade-up" className="glow-surface surface flex flex-col p-5 sm:p-6 lg:col-span-8" aria-label="Performa penjualan">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-base font-semibold tracking-tight">Performa Penjualan</h2>

@@ -120,7 +120,7 @@ export default function StoresPage() {
         </div>
 
         {/* ACTION BAR */}
-        <div className="flex flex-wrap gap-2 bg-card p-4 rounded-xl border border-border shadow-sm">
+        <div className="glow-surface flex flex-wrap gap-2 bg-card p-4 rounded-xl border border-border shadow-sm">
           {can("store", "input") && (
             <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
               <Plus className="size-4" /> Create

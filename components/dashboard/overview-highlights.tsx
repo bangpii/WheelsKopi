@@ -36,7 +36,7 @@ export function OverviewHighlights({
     >
       <Link
         href="/distribusi"
-        className="surface group flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5 lg:col-span-3"
+        className="glow-surface surface group flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5 lg:col-span-3"
       >
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
           <Package className="size-5" />
@@ -57,7 +57,7 @@ export function OverviewHighlights({
 
       <Link
         href="/customers"
-        className="surface group flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5 lg:col-span-3"
+        className="glow-surface surface group flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5 lg:col-span-3"
       >
         <span className="flex size-12 items-center justify-center rounded-2xl bg-success-soft text-success">
           <Users className="size-5" />
@@ -76,7 +76,7 @@ export function OverviewHighlights({
         <ArrowUpRight className="ml-auto size-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       </Link>
 
-      <section className="surface p-5 lg:col-span-6" aria-label="News">
+      <section className="glow-surface surface p-5 lg:col-span-6" aria-label="News">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-xl bg-warning-soft text-warning">

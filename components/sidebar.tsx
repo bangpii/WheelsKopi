@@ -298,7 +298,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                       }
                     }}
                     aria-current={isActive ? "page" : undefined}
-                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                    className={`glow-surface group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                       isActive
                         ? "bg-primary-soft text-accent-foreground shadow-[inset_0_0_0_1px_var(--border)]"
                         : "text-muted-foreground hover:translate-x-0.5 hover:bg-muted hover:text-foreground"
@@ -326,7 +326,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                   type="button"
                   onClick={() => toggleExpand(item.id)}
                   aria-expanded={isExpanded}
-                  className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:translate-x-0.5 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  className="glow-surface group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:translate-x-0.5 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <Icon className="size-[18px] shrink-0" />
                   <span className="flex-1 text-left">{item.label}</span>
@@ -363,7 +363,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                                 onNavigate?.();
                               }}
                               aria-current={childActive ? "page" : undefined}
-                              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors ${
+                              className={`glow-surface flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors ${
                                 childActive
                                   ? "bg-primary-soft font-medium text-accent-foreground"
                                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

@@ -37,7 +37,7 @@ export function TopProducts({ startDate, endDate }: TopProductsProps) {
     .slice(0, 4);
 
   return (
-    <div className="surface p-6 rounded-2xl border border-border bg-card">
+    <div className="glow-surface surface p-6 rounded-2xl border border-border bg-card">
       <div className="flex justify-between items-center">
         <h2 className="font-display text-base font-semibold">Top Produk</h2>
         <button className="text-xs text-primary hover:underline">Lihat semua</button>

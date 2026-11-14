@@ -181,7 +181,7 @@ export default function MechanicPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="glow-surface flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1">
             {filters.map((item) => {
               const count = item === "Semua" ? sellouts.length : counts[item];

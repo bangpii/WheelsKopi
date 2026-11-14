@@ -124,7 +124,7 @@ export function InsightGrid({ startDate, endDate }: InsightGridProps) {
     <div className="grid gap-4 lg:grid-cols-3">
       <section
         data-aos="fade-up"
-        className="surface overflow-hidden p-5 sm:p-6"
+        className="glow-surface surface overflow-hidden p-5 sm:p-6"
         aria-label="Produk teratas"
       >
         <div className="flex items-start justify-between gap-3">
@@ -182,7 +182,7 @@ export function InsightGrid({ startDate, endDate }: InsightGridProps) {
       <section
         data-aos="fade-up"
         data-aos-delay="70"
-        className="surface overflow-hidden p-5 sm:p-6"
+        className="glow-surface surface overflow-hidden p-5 sm:p-6"
         aria-label="Target penjualan"
       >
         <div className="flex items-start justify-between gap-3">
@@ -265,7 +265,7 @@ export function InsightGrid({ startDate, endDate }: InsightGridProps) {
       <section
         data-aos="fade-up"
         data-aos-delay="140"
-        className="surface overflow-hidden p-5 sm:p-6"
+        className="glow-surface surface overflow-hidden p-5 sm:p-6"
         aria-label="Supplier aktif"
       >
         <div className="flex items-start justify-between gap-3">

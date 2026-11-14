@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useData } from "@/lib/context/data-context";
+import { useClientMounted } from "@/lib/use-client-mounted";
 import {
   ADMIN_ROLE,
 } from "@/lib/auth";
@@ -40,17 +41,25 @@ function actionLabel(action: PermissionAction) {
 
 export default function UtilityPage() {
   const { roles, rolePermissions, setRolePermissions } = useData();
-  const isAdministrator = useIsAdministrator();
+  const storedIsAdministrator = useIsAdministrator();
+  const clientMounted = useClientMounted();
+  const isAdministrator = clientMounted ? storedIsAdministrator : true;
+  const activeRoles = clientMounted ? roles : defaultRoleNames;
+
+  const activeRolePermissions = clientMounted
+    ? rolePermissions
+    : defaultRolePermissions;
+
   const [editingRole, setEditingRole] = useState<RolePermission | null>(null);
   const [selectedTab, setSelectedTab] = useState(0);
 
   const allRoles = useMemo(
-    () => Array.from(new Set([...defaultRoleNames, ...roles])),
-    [roles],
+    () => Array.from(new Set([...defaultRoleNames, ...activeRoles])),
+    [activeRoles],
   );
 
   const getRolePermissions = (roleName: string) =>
-    rolePermissions.find((entry) => entry.roleName === roleName) ??
+    activeRolePermissions.find((entry) => entry.roleName === roleName) ??
     defaultRolePermissions.find((entry) => entry.roleName === roleName) ?? {
       roleName,
       permissions: [],

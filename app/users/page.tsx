@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { GlowCard } from "@/components/glow-card";
 import { useData } from "@/lib/context/data-context";
 import { useCan, useIsAdministrator } from "@/lib/permissions";
 import { ADMIN_ROLE } from "@/lib/auth";
@@ -242,7 +243,7 @@ export default function UsersPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
+        <GlowCard className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           <div className="flex gap-2">
             {can("user", "input") && (
               <button
@@ -272,9 +273,9 @@ export default function UsersPage() {
               placeholder="Cari nama atau email..."
             />
           </div>
-        </div>
+        </GlowCard>
 
-        <div className="surface overflow-hidden">
+        <GlowCard className="surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
@@ -407,7 +408,7 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </GlowCard>
       </div>
 
       {/* MODAL 1: FORM USER */}

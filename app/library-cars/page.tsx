@@ -122,7 +122,7 @@ export default function LibraryCarsPage() {
         </div>
 
         {/* ACTION BAR */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
+        <div className="glow-surface flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           <div className="flex gap-2">
             {can("library", "input") && (
               <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shadow-sm">

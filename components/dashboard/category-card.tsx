@@ -56,7 +56,7 @@ export function CategoryCard({ startDate, endDate }: CategoryCardProps) {
   const offsetAksesoris = ((percentBan + percentVelg) / 100) * circumference;
 
   return (
-    <div className="surface p-6 rounded-2xl border border-border bg-card lg:col-span-4">
+    <div className="glow-surface surface p-6 rounded-2xl border border-border bg-card lg:col-span-4">
       <h2 className="font-display text-base font-semibold tracking-tight">Kategori Terlaris</h2>
       <p className="mt-1 text-[13px] text-muted-foreground">Proporsi unit terjual</p>
       

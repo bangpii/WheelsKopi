@@ -134,7 +134,7 @@ export default function DashboardPage() {
         <section id="supplier" className="grid gap-4">
           <section
             data-aos="fade-up"
-            className="surface flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center sm:p-6"
+            className="glow-surface surface flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center sm:p-6"
             aria-label="Aksi cepat"
           >
             <div>

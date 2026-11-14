@@ -15,6 +15,7 @@ import { AosInit } from "./aos-init";
 import { GlobalSearch, NotificationBell, ProfileMenu } from "./header-tools";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
+import { useSurfaceGlow } from "@/lib/use-surface-glow";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -48,6 +49,7 @@ function AccessDenied() {
 export function AppShell({ children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const glowHandlers = useSurfaceGlow();
   const can = useCan();
   const isAdministrator = useIsAdministrator();
   const requiredModule = moduleForPath(pathname);
@@ -79,7 +81,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [mobileOpen]);
 
   return (
-    <div className="min-h-full">
+    <div {...glowHandlers} className="min-h-full">
       <AosInit />
 
       <div className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-border bg-sidebar lg:block">

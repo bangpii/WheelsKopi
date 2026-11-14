@@ -139,7 +139,7 @@ export default function SuppliersPage() {
           <p className="text-sm text-muted-foreground mt-1">Kelola data kontak, legalitas, dan informasi supplier Anda.</p>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
+        <div className="glow-surface flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           {can("supplier", "input") && (
             <button onClick={handleAddClick} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
               <Plus className="size-4" /> Create Supplier

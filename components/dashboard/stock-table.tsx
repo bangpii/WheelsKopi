@@ -73,7 +73,7 @@ export function StockTable({ startDate, endDate }: StockTableProps) {
   return (
     <section
       data-aos="fade-up"
-      className="surface overflow-hidden p-0 lg:col-span-8"
+      className="glow-surface surface overflow-hidden p-0 lg:col-span-8"
       aria-label="Daftar stok ban"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 sm:px-6">

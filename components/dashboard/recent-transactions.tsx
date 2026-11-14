@@ -66,7 +66,7 @@ export function RecentTransactions({ startDate, endDate }: RecentTransactionsPro
     <section
       data-aos="fade-up"
       data-aos-delay="80"
-      className="surface flex flex-col p-5 sm:p-6 lg:col-span-4"
+      className="glow-surface surface flex flex-col p-5 sm:p-6 lg:col-span-4"
       aria-label="Transaksi terbaru"
     >
       <div className="flex items-start justify-between gap-3">

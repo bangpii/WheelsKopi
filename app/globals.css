@@ -231,6 +231,80 @@
     0 0 0 1px rgb(255 255 255 / 0.04);
 }
 
+.surface,
+.glow-surface {
+  position: relative;
+  isolation: isolate;
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-active: 0;
+  --glow-size: 280px;
+}
+
+.surface::before,
+.surface::after,
+.glow-surface::before,
+.glow-surface::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.surface::before,
+.glow-surface::before {
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  background: radial-gradient(
+    var(--glow-size) circle at var(--glow-x) var(--glow-y),
+    var(--primary) 0%,
+    color-mix(in oklab, var(--primary) 55%, transparent) 34%,
+    transparent 72%
+  );
+  opacity: var(--glow-active);
+  transition: opacity 220ms ease;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.surface::after,
+.glow-surface::after {
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    calc(var(--glow-size) * 1.4) circle at var(--glow-x) var(--glow-y),
+    color-mix(in oklab, var(--primary) 13%, transparent) 0%,
+    color-mix(in oklab, var(--primary) 5%, transparent) 42%,
+    transparent 72%
+  );
+  opacity: calc(var(--glow-active) * 0.9);
+  transition: opacity 260ms ease;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .surface::before,
+  .surface::after,
+  .glow-surface::before,
+  .glow-surface::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surface::before,
+  .surface::after,
+  .glow-surface::before,
+  .glow-surface::after {
+    transition: none;
+  }
+}
+
 .modal-backdrop {
   background:
     radial-gradient(

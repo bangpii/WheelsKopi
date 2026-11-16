@@ -18,7 +18,7 @@ interface ProductSales {
   id: string;
   name: string;
   brand: string;
-  category: "Ban" | "Others";
+  category: "Ban" | "Others" | "Sorted";
   sold: number;
   revenue: number;
 }
@@ -153,7 +153,7 @@ export function InsightGrid({ startDate, endDate }: InsightGridProps) {
             topProducts.map((product, index) => (
               <Link
                 key={product.id}
-                href={`/distribusi?tab=${product.category === "Ban" ? "ban" : "others"}`}
+                href={`/distribusi?tab=${product.category === "Ban" ? "ban" : product.category === "Sorted" ? "sorted" : "others"}`}
                 className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-muted/60"
               >
                 <span className="flex size-9 items-center justify-center rounded-xl bg-muted font-display text-xs font-semibold">

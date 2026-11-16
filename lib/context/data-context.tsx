@@ -73,7 +73,7 @@ export type { DistribusiItem } from "@/lib/distribusi-data";
 
 export type Product = DistribusiItem & {
   /** Alias kategori untuk kompatibilitas halaman lama. */
-  kategoriUtama: "Others" | "Ban";
+  kategoriUtama: "Others" | "Ban" | "Sorted";
   /** Riwayat perubahan (audit log). */
   history: string[];
 };

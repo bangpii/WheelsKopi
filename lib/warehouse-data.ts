@@ -142,6 +142,8 @@ export interface ReceiptPORecord {
   address: string;
   date: string;
   status: "Completed" | "Pending";
+  shippingFee?: number;
+  notes?: string;
 }
 
 export const receiptPOs: ReceiptPORecord[] = [

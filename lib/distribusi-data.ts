@@ -4,7 +4,7 @@
 /*  Tipe Data                                                         */
 /* ------------------------------------------------------------------ */
 
-export type DistribusiCategory = "Ban" | "Others";
+export type DistribusiCategory = "Ban" | "Others" | "Sorted";
 export type DistribusiPayment = "Lunas" | "Bon" | "Tidak Lunas";
 
 export const othersCategories = [
@@ -48,7 +48,7 @@ export interface DistribusiItem {
   ukuranTinggi?: string;
   hargaTagihanToko?: number;
 
-  // Velg / Others
+  // Velg / Others / Sorted
   merekProduk?: string;
   kodeBarang?: string;
   typeVelg?: string;
@@ -93,7 +93,7 @@ export interface DistribusiFormValues {
   ukuranTapak?: string;
   ukuranTinggi?: string;
 
-  // Others
+  // Others / Sorted
   subKategori?: string;
   merekProduk?: string;
   typeVelg?: string;
@@ -240,22 +240,31 @@ export function formToItem(
     ? buildVelgItemCode({ ...v, tanggal: v.tanggal || today })
     : undefined;
 
-  const namaBarang = isBan
-    ? buildBanName(v)
-    : isVelg && itemCode
-      ? itemCode
-      : v.namaBarang?.trim() ||
-        [v.merekProduk?.trim(), v.subKategori?.trim()]
-          .filter(Boolean)
-          .join(" ") ||
-        v.subKategori ||
-        "Others";
+  // Generate Nama Barang
+  let namaBarang = "";
+  if (isBan) {
+    namaBarang = buildBanName(v);
+  } else if (isVelg && itemCode) {
+    namaBarang = itemCode;
+  } else {
+    // Untuk Others (Non-Velg) & Sorted
+    namaBarang = v.namaBarang?.trim() ||
+      [v.merekProduk?.trim(), v.subKategori?.trim()]
+        .filter(Boolean)
+        .join(" ") ||
+      v.subKategori ||
+      "Barang";
+  }
 
-  const ukuran = isBan
-    ? [v.ukuranTapak, v.ukuranTinggi].filter(Boolean).join("/")
-    : isVelg
-      ? [v.ring, v.wide].filter(Boolean).join(" ")
-      : v.keterangan || "";
+  // Generate Ukuran
+  let ukuran = "";
+  if (isBan) {
+    ukuran = [v.ukuranTapak, v.ukuranTinggi].filter(Boolean).join("/");
+  } else if (isVelg) {
+    ukuran = [v.ring, v.wide].filter(Boolean).join(" ");
+  } else {
+    ukuran = v.keterangan || "-";
+  }
 
   return {
     id,
@@ -332,31 +341,6 @@ export const initialBanItems: DistribusiItem[] = [
     ukuranTinggi: "65",
     hargaTagihanToko: 1050000,
   },
-  {
-    id: "WK-8002",
-    kategori: "Ban",
-    namaBarang: "Michelin Pilot Sport 225/45 R18",
-    subKategori: "Michelin",
-    supplier: "PT Michelin Indonesia",
-    ukuran: "225/45",
-    ring: "R18",
-    hargaModalAsli: 1500000,
-    hargaModalToko: 1800000,
-    stok: 10,
-    gambar: "",
-    tanggal: "2026-01-15",
-    pembayaran: "Lunas",
-    jenisBarang: "Ban Tubeless",
-    owner: "Budi",
-    paymentDate: "2026-01-15",
-    nomorBon: "BON-2601-102",
-    notes: "Stok ban sport",
-    merekBan: "Michelin",
-    typeBan: "Pilot Sport",
-    ukuranTapak: "225",
-    ukuranTinggi: "45",
-    hargaTagihanToko: 1800000,
-  },
 ];
 
 // 2. DATA OTHERS
@@ -381,24 +365,7 @@ export const initialOthersItems: DistribusiItem[] = [
     et: "25",
     colour: "BMC",
     item: "SSW S280 18 9,5 6x139.7 25 BMC #Jan2601",
-    gtySet: 4,
     standarPrice: 3200000,
-    discount: 5,
-    dealerPrice: 2950000,
-    dprice: 2900000,
-    discountType: "Cash",
-    rawPrice: 3000000,
-    sswDisc2: 2,
-    rawPriceAfterDisc: 2940000,
-    shippingFee: 150000,
-    shippingPerSet: 37500,
-    subTotalModalTP: 2550000,
-    modal1Set: 2475000,
-    paymentTipe: "Transfer",
-    up: 2950000,
-    modalToko: 2550000,
-    arrivalDate: "2026-01-15",
-    stockOwner: "Gudang Pusat",
     tanggal: "2026-01-26",
     pembayaran: "Lunas",
     jenisBarang: "Velg",
@@ -407,31 +374,51 @@ export const initialOthersItems: DistribusiItem[] = [
     nomorBon: "BON-2601-001",
     notes: "Stok awal velg racing",
   },
+];
+
+// 3. DATA SORTED
+export const initialSortedItems: DistribusiItem[] = [
   {
-    id: "WK-9002",
-    kategori: "Others",
-    namaBarang: "KYB Shock Absorber Belakang",
-    subKategori: "Shock Absorber",
-    supplier: "PT Kayaba Indonesia",
-    ukuran: "-",
+    id: "WK-7001",
+    kategori: "Sorted",
+    namaBarang: "Parfum Mobil Lavender",
+    subKategori: "Parfum",
+    supplier: "PT Aroma Indah",
+    ukuran: "100ml",
     ring: "",
-    hargaModalAsli: 420000,
-    hargaModalToko: 550000,
-    stok: 5,
+    hargaModalAsli: 25000,
+    hargaModalToko: 45000,
+    standarPrice: 50000,
+    stok: 50,
     gambar: "",
-    merekProduk: "KYB",
-    tanggal: "2026-01-20",
-    pembayaran: "Bon",
-    jenisBarang: "Shock Absorber",
-    owner: "Andi",
-    paymentDate: "2026-02-10",
-    nomorBon: "BON-2601-002",
-    notes: "Tempo 30 hari",
+    merekProduk: "Lavender",
+    keterangan: "Botol kaca 100ml",
+    tanggal: "2026-02-01",
+    notes: "Wangi tahan lama",
+  },
+  {
+    id: "WK-7002",
+    kategori: "Sorted",
+    namaBarang: "Centering Mur Roda Alumunium",
+    subKategori: "Centering Mur Roda",
+    supplier: "CV Maju Jaya",
+    ukuran: "M12 x 1.5",
+    ring: "",
+    hargaModalAsli: 15000,
+    hargaModalToko: 35000,
+    standarPrice: 40000,
+    stok: 100,
+    gambar: "",
+    merekProduk: "Racing",
+    keterangan: "Bahan Alumunium",
+    tanggal: "2026-02-05",
+    notes: "Ringan & kuat",
   },
 ];
 
-// 3. GABUNGAN SEMUA DATA
+// 4. GABUNGAN SEMUA DATA
 export const initialDistribusiItems: DistribusiItem[] = [
   ...initialBanItems,
   ...initialOthersItems,
+  ...initialSortedItems,
 ];

@@ -21,6 +21,7 @@ export const PAGE_RESULTS: SearchPage[] = [
   { id: "p-communities", group: "Halaman", title: "Community", subtitle: "Master Management", href: "/communities" },
   { id: "p-customers", group: "Halaman", title: "Customer", subtitle: "Master Management", href: "/customers" },
   { id: "p-discounts", group: "Halaman", title: "Voucher & Discount", subtitle: "Master Management", href: "/discounts" },
+  { id: "p-daily-ops", group: "Halaman", title: "On Going Daily Ops", subtitle: "Papan kegiatan harian toko", href: "/daily-ops" },
   { id: "p-utility", group: "Halaman", title: "Utility", subtitle: "Pengaturan hak akses", href: "/settings/utility" },
   { id: "p-po", group: "Halaman", title: "Purchase Orders", subtitle: "Transaction", href: "/purchase-orders" },
   { id: "p-receipt", group: "Halaman", title: "Receipt PO", subtitle: "Transaction", href: "/transaction/receipt" },

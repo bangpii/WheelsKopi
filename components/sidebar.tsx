@@ -12,6 +12,7 @@ import {
   Database,
   LayoutDashboard,
   LifeBuoy,
+  Radio,
   ReceiptText,
   TrendingUp,
   Wrench,
@@ -107,6 +108,13 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Report Profit", href: "/report/profit", moduleId: "report" },
       { label: "Trade Sellout", href: "/report/trade-sellout", moduleId: "trade-sellout" },
     ],
+  },
+  {
+    id: "daily-ops",
+    label: "On Going Daily Ops",
+    icon: Radio,
+    href: "/daily-ops",
+    moduleId: "daily-ops",
   },
   {
     id: "utility",

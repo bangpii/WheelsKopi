@@ -70,6 +70,7 @@ export const MODULE_GROUPS: PermissionGroup[] = [
     groupName: "Operasional",
     modules: [
       { id: "mekanik", label: "Halaman Mekanik", actions: ["view", "edit"] },
+      { id: "daily-ops", label: "On Going Daily Ops", actions: ["view"] },
     ],
   },
   {
@@ -97,6 +98,7 @@ const ROUTE_MODULES: Array<[string, string]> = [
   ["/transaction/daily-spend-global", "daily-spend-global"],
   ["/transaction/work", "sellout"],
   ["/mekanik", "mekanik"],
+  ["/daily-ops", "daily-ops"],
   ["/purchase-orders", "purchase-order"],
   ["/finance-store", "finance-store"],
   ["/distribusi", "distribusi"],

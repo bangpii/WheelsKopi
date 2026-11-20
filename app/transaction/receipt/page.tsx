@@ -190,7 +190,7 @@ export default function ReceiptPurchaseOrderPage() {
                 <tr>
                   <th className={thClass}>Number Receipt</th>
                   <th className={thClass}>Number PO</th>
-                  <th className={thClass}>Supplier / Customer</th>
+                  <th className={thClass}>Supplier</th>
                   <th className={thClass}>Alamat</th>
                   <th className={thClass}>Date</th>
                   <th className={thClass}>Status</th>
@@ -273,7 +273,7 @@ export default function ReceiptPurchaseOrderPage() {
                   <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={fieldClass} />
                 </label>
                 <label className="space-y-1.5 text-sm sm:col-span-2">
-                  <span className="font-medium">Supplier / Customer</span>
+                  <span className="font-medium">Supplier</span>
                   <input required value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} className={fieldClass} />
                 </label>
                 <label className="space-y-1.5 text-sm sm:col-span-2">

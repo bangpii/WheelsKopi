@@ -24,6 +24,16 @@ interface RegisterProductModalProps {
 const fieldClass = "w-full rounded-xl border border-border/70 bg-background/60 px-3.5 py-2.5 text-sm text-foreground outline-none backdrop-blur-sm transition-colors placeholder:text-muted-foreground/70 focus:border-primary/60 focus:ring-2 focus:ring-ring/40";
 const labelClass = "mb-1.5 block text-[11px] font-semibold tracking-[0.1em] text-muted-foreground uppercase";
 
+const formatPriceInput = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) return "";
+
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const parsePriceInput = (value?: string) => Number((value ?? "").replace(/\D/g, "")) || 0;
+
 function createInitialForm(initialData: Product | null | undefined, suppliers: { name: string }[], initialSubKategori?: string): DistribusiFormValues {
   if (initialData) {
     return {
@@ -53,7 +63,7 @@ function createInitialForm(initialData: Product | null | undefined, suppliers: {
       hargaModalAsli: String(initialData.hargaModalAsli ?? ""), 
       hargaModalToko: String(initialData.hargaModalToko ?? ""),
       hargaTagihanToko: String(initialData.hargaTagihanToko ?? ""), 
-      standarPrice: String(initialData.standarPrice ?? ""),
+      standarPrice: formatPriceInput(String(initialData.standarPrice ?? "")),
     };
   }
   return {
@@ -126,8 +136,7 @@ export function RegisterProductModal({
       return "";
     }
     
-    // Validasi untuk Others (Non-Velg) & Sorted
-    if (!formData.keterangan?.trim()) return "Keterangan wajib diisi.";
+    if (!isSorted && !formData.keterangan?.trim()) return "Keterangan wajib diisi.";
     return "";
   };
 
@@ -145,7 +154,7 @@ export function RegisterProductModal({
       typeVelg: isVelg ? formData.typeVelg : undefined, wide: isVelg ? formData.wide : undefined, hole: isVelg ? formData.hole : undefined,
       et: isVelg ? formData.et : undefined, colour: isVelg ? formData.colour : undefined, nobes: isVelg ? formData.nobes : undefined,
       keterangan: isBan || isVelg ? undefined : formData.keterangan, notes: isBan || isVelg ? undefined : formData.notes,
-      standarPrice: formData.standarPrice,
+      standarPrice: String(parsePriceInput(formData.standarPrice)),
       hargaModalAsli: initialData ? String(initialData.hargaModalAsli ?? "") : undefined,
       hargaModalToko: initialData ? String(initialData.hargaModalToko ?? "") : undefined,
       hargaTagihanToko: initialData ? String(initialData.hargaTagihanToko ?? "") : undefined,
@@ -223,7 +232,7 @@ export function RegisterProductModal({
                 </div>
                 <label className="sm:col-span-2"><span className={labelClass}>Supplier</span><select value={formData.supplier} onChange={(e) => update({ supplier: e.target.value })} className={fieldClass}><option value="">Pilih supplier</option>{suppliers.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}</select></label>
                 <label><span className={labelClass}>Stok</span><input value={formData.stok} onChange={(e) => update({ stok: e.target.value })} placeholder="0" type="number" min={0} className={fieldClass} /></label>
-                <label><span className={labelClass}>Standar Price</span><input value={formData.standarPrice ?? ""} onChange={(e) => update({ standarPrice: e.target.value })} placeholder="0" type="number" min={0} className={fieldClass} /></label>
+                <label><span className={labelClass}>Standar Price (Rp)</span><input value={formData.standarPrice ?? ""} onChange={(e) => update({ standarPrice: formatPriceInput(e.target.value) })} placeholder="1.000.000" inputMode="numeric" className={fieldClass} /></label>
                 <div className="sm:col-span-2"><ImageField value={formData.gambar} onChange={handleImageUpload} onRemove={() => update({ gambar: "" })} /></div>
               </div>
             ) : (
@@ -261,15 +270,15 @@ export function RegisterProductModal({
                     <label><span className={labelClass}>Colour</span><input value={formData.colour ?? ""} onChange={(e) => update({ colour: e.target.value })} className={fieldClass} /></label>
                     <label><span className={labelClass}>Nobes</span><input value={formData.nobes ?? ""} onChange={(e) => update({ nobes: e.target.value })} className={fieldClass} /></label>
                     <label><span className={labelClass}>Stok</span><input value={formData.stok} onChange={(e) => update({ stok: e.target.value })} type="number" min={0} className={fieldClass} /></label>
-                    <label><span className={labelClass}>Standar Price</span><input value={formData.standarPrice ?? ""} onChange={(e) => update({ standarPrice: e.target.value })} type="number" min={0} className={fieldClass} /></label>
+                    <label><span className={labelClass}>Standar Price (Rp)</span><input value={formData.standarPrice ?? ""} onChange={(e) => update({ standarPrice: formatPriceInput(e.target.value) })} inputMode="numeric" className={fieldClass} /></label>
                   </>
                  ) : (
                   /* JIKA OTHERS (NON-VELG) ATAU SORTED */
                   <>
                     <label><span className={labelClass}>Merek Produk</span><input value={formData.merekProduk ?? ""} onChange={(e) => update({ merekProduk: e.target.value })} className={fieldClass} /></label>
                     <label><span className={labelClass}>Stok</span><input value={formData.stok} onChange={(e) => update({ stok: e.target.value })} type="number" min={0} className={fieldClass} /></label>
-                    <label><span className={labelClass}>Standar Price</span><input value={formData.standarPrice ?? ""} onChange={(e) => update({ standarPrice: e.target.value })} type="number" min={0} className={fieldClass} /></label>
-                    <label className="sm:col-span-2"><span className={labelClass}>Keterangan / Ukuran</span><input value={formData.keterangan ?? ""} onChange={(e) => update({ keterangan: e.target.value })} placeholder="cth: 100ml / M12" className={fieldClass} /></label>
+                    <label><span className={labelClass}>Standar Price (Rp)</span><input value={formData.standarPrice ?? ""} onChange={(e) => update({ standarPrice: formatPriceInput(e.target.value) })} inputMode="numeric" className={fieldClass} /></label>
+                    <label className="sm:col-span-2"><span className={labelClass}>Keterangan / Ukuran{isSorted ? " (Opsional)" : ""}</span><input value={formData.keterangan ?? ""} onChange={(e) => update({ keterangan: e.target.value })} placeholder="cth: 100ml / M12" className={fieldClass} /></label>
                     <label className="sm:col-span-2"><span className={labelClass}>Notes</span><textarea value={formData.notes ?? ""} onChange={(e) => update({ notes: e.target.value })} rows={2} className={`${fieldClass} resize-none`} /></label>
                   </>
                  )}
